@@ -1,0 +1,1672 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>RidgeLine — MTB Training</title>
+<style>
+  :root {
+    --bg: #0e1410;
+    --bg-2: #131c17;
+    --panel: #17221c;
+    --panel-2: #1d2a23;
+    --line: #25372d;
+    --text: #e8f0ea;
+    --muted: #9fb1a5;
+    --accent: #ff7a29;
+    --accent-2: #f4b860;
+    --green: #6cc28a;
+    --red: #e87262;
+    --blue: #6aa5d6;
+    --radius: 14px;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: radial-gradient(1200px 600px at 70% -10%, #1a2a21 0%, var(--bg) 60%) fixed;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-2); text-decoration: none; }
+  button { font-family: inherit; }
+  input, select, textarea {
+    font-family: inherit; font-size: 14px;
+    background: #0c130f; color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #1a0a00; border: 0; padding: 10px 16px;
+    border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;
+    transition: transform .05s ease, background .15s ease;
+  }
+  .btn:hover { background: #ff8b41; }
+  .btn:active { transform: translateY(1px); }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .btn.ghost:hover { background: var(--panel-2); }
+  .btn.danger { background: var(--red); color: #20100c; }
+  .btn.sm { padding: 6px 10px; font-size: 12px; }
+  .chip { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+  .chip.accent { background: rgba(255,122,41,.15); color: var(--accent-2); border-color: rgba(255,122,41,.4); }
+  .chip.green { background: rgba(108,194,138,.15); color: var(--green); border-color: rgba(108,194,138,.4); }
+  .chip.blue { background: rgba(106,165,214,.15); color: var(--blue); border-color: rgba(106,165,214,.4); }
+  .row { display: flex; gap: 12px; align-items: center; }
+  .row.wrap { flex-wrap: wrap; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .grid { display: grid; gap: 14px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+
+  /* AUTH SCREEN */
+  .auth-wrap {
+    min-height: 100vh; display: grid; place-items: center; padding: 24px;
+  }
+  .auth-card {
+    width: 100%; max-width: 420px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 18px;
+    box-shadow: var(--shadow); padding: 28px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px;
+    letter-spacing: .3px;
+  }
+  .logo-mark {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), #c54f10);
+    display: grid; place-items: center; box-shadow: 0 4px 18px rgba(255,122,41,.4);
+  }
+  .logo-mark svg { width: 18px; height: 18px; }
+  h1 { font-size: 22px; margin: 16px 0 6px; }
+  h2 { font-size: 18px; margin: 0 0 4px; }
+  h3 { font-size: 14px; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; font-weight: 700; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+  .field { margin-bottom: 12px; }
+  .auth-tabs { display: flex; gap: 8px; margin-top: 8px; margin-bottom: 18px; }
+  .auth-tabs button {
+    flex: 1; padding: 8px; background: transparent; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-weight: 600;
+  }
+  .auth-tabs button.active { background: var(--panel-2); color: var(--text); border-color: var(--accent); }
+
+  /* APP SHELL */
+  .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  .sidebar {
+    background: var(--bg-2); border-right: 1px solid var(--line);
+    padding: 18px 14px; display: flex; flex-direction: column; gap: 16px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav button {
+    text-align: left; background: transparent; color: var(--muted);
+    border: 0; padding: 9px 12px; border-radius: 9px; cursor: pointer;
+    font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px;
+  }
+  .nav button:hover { background: var(--panel); color: var(--text); }
+  .nav button.active { background: var(--panel); color: var(--text); }
+  .nav button.active::before {
+    content: ""; width: 3px; height: 16px; background: var(--accent); border-radius: 2px; margin-left: -3px;
+  }
+  .nav .ico { width: 16px; opacity: .85; }
+  .user-card {
+    margin-top: auto; padding: 12px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 12px; display: flex; gap: 10px; align-items: center;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #c54f10);
+    display: grid; place-items: center; font-weight: 700; color: #1a0a00;
+  }
+
+  .main { padding: 28px 32px 60px; max-width: 1100px; }
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .page-title { font-size: 26px; font-weight: 800; margin: 0; }
+  .page-sub { color: var(--muted); margin-top: 4px; font-size: 14px; }
+
+  /* CARDS */
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 18px;
+  }
+  .card.tight { padding: 14px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .stat { display: flex; flex-direction: column; gap: 4px; padding: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .stat .v { font-size: 22px; font-weight: 800; }
+  .stat .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
+
+  /* PHASE STRIP */
+  .phase-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .phase {
+    padding: 12px 10px; border-radius: 10px; background: var(--panel-2);
+    border: 1px solid var(--line); text-align: center; cursor: pointer;
+  }
+  .phase.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .phase .ph-name { font-weight: 700; font-size: 13px; }
+  .phase .ph-meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+  /* WEEK GRID */
+  .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .day {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px; min-height: 110px; cursor: pointer; display: flex; flex-direction: column; gap: 6px;
+    transition: border-color .15s ease;
+  }
+  .day:hover { border-color: var(--accent); }
+  .day .d-name { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+  .day .d-sessions { display: flex; flex-direction: column; gap: 4px; }
+  .day .tag { font-size: 11px; padding: 2px 6px; border-radius: 6px; display: inline-block; }
+  .tag.ride { background: rgba(255,122,41,.18); color: var(--accent-2); }
+  .tag.strength { background: rgba(106,165,214,.18); color: var(--blue); }
+  .tag.yoga { background: rgba(108,194,138,.18); color: var(--green); }
+  .tag.run { background: rgba(244,184,96,.18); color: var(--accent-2); }
+  .tag.rope { background: rgba(232,114,98,.18); color: var(--red); }
+  .tag.rest { background: var(--panel); color: var(--muted); }
+
+  /* MODAL */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: grid; place-items: center; padding: 24px; z-index: 50; }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; max-width: 540px; width: 100%; max-height: 88vh; overflow-y: auto; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .x { background: transparent; color: var(--muted); border: 0; cursor: pointer; font-size: 20px; }
+
+  /* LISTS */
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  .list-item { display: flex; gap: 12px; align-items: flex-start; padding: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; }
+  .list-item .lead { font-weight: 600; }
+  .list-item .meta { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .pose { display: flex; gap: 10px; align-items: center; padding: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; }
+  .pose .pn { width: 32px; height: 32px; border-radius: 8px; background: rgba(108,194,138,.2); color: var(--green); display: grid; place-items: center; font-weight: 700; }
+  .pose .pose-meta { color: var(--muted); font-size: 12px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
+  tr:last-child td { border-bottom: 0; }
+
+  /* PROGRESS */
+  .progress { height: 6px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
+  .progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; }
+
+  /* checkbox row */
+  .check {
+    display: flex; align-items: center; gap: 10px; padding: 10px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; cursor: pointer;
+  }
+  .check input { width: auto; }
+  .check.done { opacity: .55; text-decoration: line-through; }
+
+  /* Mobile */
+  @media (max-width: 820px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; flex-direction: row; flex-wrap: wrap; overflow: auto; }
+    .nav { flex-direction: row; flex-wrap: wrap; }
+    .user-card { margin-top: 0; }
+    .week-grid { grid-template-columns: repeat(2, 1fr); }
+    .phase-strip { grid-template-columns: repeat(2, 1fr); }
+    .main { padding: 18px; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* ------------------------ DATA ------------------------ */
+
+const PHASES = [
+  { key: "base",     name: "Base",     weeks: 4, desc: "Aerobic endurance + general strength foundation.", color: "blue" },
+  { key: "build",    name: "Build",    weeks: 4, desc: "Threshold, sweet-spot, hill repeats. Stack the load.", color: "accent" },
+  { key: "peak",     name: "Peak",     weeks: 2, desc: "Race-specific intensity, VO2, openers.", color: "accent" },
+  { key: "race",     name: "Race",     weeks: 1, desc: "Taper. Sharpen. Rest. Then send it.", color: "green" },
+  { key: "recovery", name: "Recovery", weeks: 1, desc: "Active recovery, mobility-heavy week.", color: "green" }
+];
+
+// 12-week periodized template — each day is a list of session tags
+const PLAN_TEMPLATE = {
+  base: [
+    ["yoga","strength"],          // Mon
+    ["ride"],                     // Tue — endurance Z2
+    ["rope","yoga"],              // Wed — skills + mobility
+    ["ride","strength"],          // Thu — tempo + strength
+    ["rest"],                     // Fri
+    ["ride"],                     // Sat — long endurance
+    ["run","yoga"]                // Sun — easy run + restorative yoga
+  ],
+  build: [
+    ["strength"],
+    ["ride"],                     // Threshold intervals
+    ["yoga","rope"],
+    ["ride","strength"],          // Sweet-spot + strength
+    ["rest"],
+    ["ride"],                     // Long w/ climbs
+    ["run","yoga"]
+  ],
+  peak: [
+    ["yoga"],
+    ["ride"],                     // VO2 intervals
+    ["rope"],
+    ["ride"],                     // Race-pace efforts
+    ["rest"],
+    ["ride"],                     // Pre-ride opener
+    ["yoga"]
+  ],
+  race: [
+    ["yoga"],
+    ["ride"],                     // Short openers
+    ["rest"],
+    ["ride"],                     // 20 min easy + 3 efforts
+    ["rest"],
+    ["ride"],                     // RACE DAY
+    ["yoga","rest"]
+  ],
+  recovery: [
+    ["yoga"],
+    ["run"],                      // Easy
+    ["yoga","rope"],
+    ["ride"],                     // Easy spin
+    ["yoga"],
+    ["ride"],                     // Trail fun ride
+    ["rest"]
+  ]
+};
+
+const DAY_NAMES = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+// Build a customizable N-week plan based on state.planWeeks
+function buildPlan() {
+  const totalWeeks = (state && state.planWeeks) || 12;
+  const scale = totalWeeks / 12;
+  // Allocate weeks per phase proportionally
+  const allocations = PHASES.map(p => Math.max(1, Math.round(p.weeks * scale)));
+  // Fix rounding drift
+  let drift = totalWeeks - allocations.reduce((a, b) => a + b, 0);
+  let i = 0;
+  while (drift !== 0) {
+    allocations[i % allocations.length] += Math.sign(drift);
+    drift -= Math.sign(drift);
+    i++;
+  }
+  const weeks = [];
+  let weekNum = 1;
+  for (let pi = 0; pi < PHASES.length; pi++) {
+    const phase = PHASES[pi];
+    for (let j = 0; j < allocations[pi]; j++) {
+      weeks.push({
+        week: weekNum++,
+        phase: phase.key,
+        phaseName: phase.name,
+        days: PLAN_TEMPLATE[phase.key].map((sessions, idx) => ({
+          day: DAY_NAMES[idx],
+          sessions,
+          details: workoutDetailsFor(phase.key, idx, sessions)
+        }))
+      });
+    }
+  }
+  return weeks;
+}
+
+function workoutDetailsFor(phase, dayIdx, sessions) {
+  const out = [];
+  for (const s of sessions) {
+    if (s === "ride") {
+      if (phase === "base") {
+        out.push({ type: "ride", name: ["60 min Z2 endurance","45 min easy spin","2 hr endurance ride","90 min tempo (15 min Z3 × 2)"][dayIdx % 4],
+                   notes: "Conversational pace. Eat & drink consistently." });
+      } else if (phase === "build") {
+        out.push({ type: "ride", name: ["75 min w/ 4×8 min @ threshold","Sweet-spot 3×12 min","2.5 hr w/ climbs","Tempo + 6 short sprints"][dayIdx % 4],
+                   notes: "Track HR or RPE 7–8. Full recovery between intervals." });
+      } else if (phase === "peak") {
+        out.push({ type: "ride", name: ["5×3 min VO2 @ all-out","Race-pace 30/30 intervals","60 min opener w/ 3×1 min","Long ride w/ race-pace efforts"][dayIdx % 4],
+                   notes: "Quality over quantity. Skip if fatigued." });
+      } else if (phase === "race") {
+        out.push({ type: "ride", name: dayIdx === 5 ? "🏁 RACE DAY" : "20 min spin + 3×30 sec openers",
+                   notes: dayIdx === 5 ? "Warm up. Pace yourself. Send." : "Wake legs up. Stay fresh." });
+      } else {
+        out.push({ type: "ride", name: "Easy trail spin — no Strava",
+                   notes: "Ride for joy. Stop for snacks." });
+      }
+    } else if (s === "strength") {
+      out.push({ type: "strength", name: STRENGTH_WORKOUTS[(dayIdx + (phase==="build"?1:0)) % STRENGTH_WORKOUTS.length].name,
+                 notes: "See Strength tab for full workout." });
+    } else if (s === "yoga") {
+      out.push({ type: "yoga", name: dayIdx % 2 === 0 ? "Pre-ride dynamic flow (15 min)" : "Post-ride restorative (20 min)",
+                 notes: "See Yoga tab for poses." });
+    } else if (s === "run") {
+      out.push({ type: "run", name: phase === "recovery" ? "20 min easy trail jog" : "30–40 min easy aerobic run",
+                 notes: "Nasal-breathing pace. Skip if knees are unhappy." });
+    } else if (s === "rope") {
+      out.push({ type: "rope", name: "Flow rope — 15 min skills",
+                 notes: "See Flow Rope tab for drills." });
+    } else if (s === "rest") {
+      out.push({ type: "rest", name: "Full rest day",
+                 notes: "Walk, hydrate, sleep. Adaptation happens now." });
+    }
+  }
+  return out;
+}
+
+const STRENGTH_WORKOUTS = [
+  {
+    name: "Lower-body Power (Day A)",
+    blocks: [
+      { name: "Goblet squat",        sets: "4 × 8", note: "Pause 1 sec at bottom" },
+      { name: "Romanian deadlift",   sets: "4 × 8", note: "Hinge, not squat. Feel hamstrings." },
+      { name: "Walking lunge",       sets: "3 × 12/leg", note: "Front knee tracks toe" },
+      { name: "Single-leg calf raise", sets: "3 × 15/leg", note: "Slow down phase" },
+      { name: "Pallof press",        sets: "3 × 10/side", note: "Anti-rotation core" }
+    ]
+  },
+  {
+    name: "Upper + Core (Day B)",
+    blocks: [
+      { name: "Push-up (or bench)",  sets: "4 × 10", note: "Shoulders away from ears" },
+      { name: "Pull-up / inverted row", sets: "4 × max", note: "Stop 1 rep before failure" },
+      { name: "Single-arm row",      sets: "3 × 10/side", note: "Squeeze shoulder blade" },
+      { name: "Plank w/ shoulder taps", sets: "3 × 30 sec", note: "No hip wiggle" },
+      { name: "Dead bug",            sets: "3 × 10/side", note: "Low back stays glued" }
+    ]
+  },
+  {
+    name: "Cycling-Specific Endurance",
+    blocks: [
+      { name: "Bulgarian split squat", sets: "3 × 10/leg", note: "Tempo 3-0-1" },
+      { name: "KB swing",            sets: "4 × 15", note: "Snap hips, not arms" },
+      { name: "Step-up to knee drive", sets: "3 × 8/leg", note: "Explosive up, slow down" },
+      { name: "Hollow-body hold",    sets: "3 × 30 sec", note: "Lower back pressed down" },
+      { name: "Side plank w/ reach", sets: "3 × 8/side", note: "Hips high" }
+    ]
+  }
+];
+
+const YOGA_WARMUP = [
+  { name: "Cat-Cow",                   reps: "8 cycles",  why: "Spinal mobility, wakes up the back" },
+  { name: "Seated Twists",             reps: "5/side",    why: "Rotational range for cornering" },
+  { name: "Low Lunge w/ Twist",        reps: "5/side",    why: "Hip flexors + thoracic" },
+  { name: "Reverse Tabletop",          reps: "30 sec ×2", why: "Opens hips, fires glutes & shoulders" },
+  { name: "Modified Upward-Facing Dog", reps: "5 breaths", why: "Counters bent-over riding posture" },
+  { name: "Anahatasana (Heart-Opener)", reps: "5 breaths", why: "Chest & shoulders from gripping bars" },
+  { name: "Navasana (Boat Pose)",      reps: "3 × 20 sec", why: "Core engagement for bike control" }
+];
+
+const YOGA_RECOVERY = [
+  { name: "Anahatasana Hold",          reps: "2 min",     why: "Deep shoulder & chest release" },
+  { name: "Quadriceps Stretch (couch)", reps: "90 sec/leg", why: "Pedaling fatigue" },
+  { name: "Prone Chest Stretch",       reps: "60 sec/side", why: "Counter rounded riding posture" },
+  { name: "Hamstring Stretch w/ Strap", reps: "90 sec/leg", why: "Prevent tight legs & low-back pain" },
+  { name: "Supta Baddha Konasana",     reps: "3–5 min",   why: "Restorative — nervous system reset" },
+  { name: "Legs-Up-the-Wall",          reps: "5 min",     why: "Drains legs, calms HR" }
+];
+
+const FLOW_ROPE_DRILLS = [
+  { name: "Figure-8 weave",       focus: "Coordination + grip relaxation", time: "2 min" },
+  { name: "Side-to-side wraps",   focus: "Thoracic rotation under load",   time: "2 min" },
+  { name: "Vertical halo",        focus: "Shoulder mobility & control",    time: "1 min" },
+  { name: "Step-through pass",    focus: "Lower-body / upper-body sync",   time: "2 min" },
+  { name: "Around-the-body",      focus: "Active range of motion",         time: "2 min" },
+  { name: "Free-flow practice",   focus: "String it all together",         time: "5 min" }
+];
+
+const SKILLS = [
+  { key: "endurance",  label: "Endurance",       desc: "Long days in the saddle" },
+  { key: "power",      label: "Power",           desc: "Punchy climbs & sprints" },
+  { key: "cornering",  label: "Cornering",       desc: "Speed & body position" },
+  { key: "drops",      label: "Drops & Jumps",   desc: "Air confidence" },
+  { key: "climbs",     label: "Technical Climbs", desc: "Tractor up rocks & roots" },
+  { key: "descents",   label: "Descents",        desc: "Reading lines at speed" },
+  { key: "mobility",   label: "Mobility",        desc: "Range of motion" },
+  { key: "strength",   label: "Strength",        desc: "Force production" }
+];
+
+const RIDER_PRESETS = {
+  Novice:       { weeklyHours: 4,  intensity: "easier",   focus: ["endurance","cornering","mobility"] },
+  Sport:        { weeklyHours: 7,  intensity: "standard", focus: ["power","descents","strength"] },
+  Pro:          { weeklyHours: 12, intensity: "harder",   focus: ["power","climbs","descents","drops"] }
+};
+
+const INTENSITY_MULT = { easier: 0.75, standard: 1, harder: 1.25 };
+
+const AI_PROMPTS = [
+  "Build me a 2-week plan focused on technical descents",
+  "I have a 50-mile race in 8 weeks — what should I prioritize?",
+  "I'm sore today. Modify my workout.",
+  "Suggest a 20-minute mobility routine for my low back",
+  "How do I get faster cornering on loose dirt?",
+  "Replace today's ride with an indoor option"
+];
+
+const SAMPLE_TRAILS = [
+  { name: "Don't Get Lost",      length: 12.4, elev: 980,  difficulty: "Blue",   region: "Local" },
+  { name: "Skyline Ridge",       length: 18.6, elev: 1450, difficulty: "Black",  region: "Local" },
+  { name: "Creekside Loop",      length: 6.2,  elev: 210,  difficulty: "Green",  region: "Local" },
+  { name: "Burnt Mountain XC",   length: 24.0, elev: 1820, difficulty: "Black",  region: "Travel" }
+];
+
+/* ------------------------ STORE ------------------------ */
+
+const STORE_KEY = "ridgeline.v1";
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return null;
+}
+function saveState(s) { localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+
+function defaultState(email) {
+  return {
+    user: {
+      email,
+      name: email.split("@")[0],
+      level: "Intermediate",
+      preset: "Sport",       // Novice / Sport / Pro
+      weeklyHours: 6,
+      goal: "Race fitness",
+      raceDate: "",
+      intensity: "standard"  // easier / standard / harder
+    },
+    planWeeks: 12,           // 8, 12, or 16
+    onboarded: false,
+    startedAt: new Date().toISOString().slice(0,10),
+    completed: {},            // "w{week}d{day}s{idx}" => true
+    sessionTweaks: {},        // "w{week}d{day}s{idx}" => "easier"|"standard"|"harder"|"skipped"
+    rides: [],
+    trails: SAMPLE_TRAILS.map(t => ({ ...t, prMin: null, lastRideISO: null })),
+    skills: SKILLS.reduce((a, s) => (a[s.key] = 5, a), {}),  // self-rating 1-10
+    focusSkills: ["endurance","cornering","strength"],       // tags driving plan emphasis
+    checkIns: [],             // [{date, sleep, soreness, energy, notes}]
+    videos: [],               // [{id,name,type,url,notes,date}]
+    aiMessages: [],           // [{role:"user"|"coach", text, ts}]
+    aiApiKey: "",             // user-supplied for real LLM call
+    aiProvider: "local",      // local / anthropic / openai
+    activeTab: "dashboard"
+  };
+}
+
+let state = loadState();
+
+/* ------------------------ HELPERS ------------------------ */
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") node.className = v;
+    else if (k === "html") node.innerHTML = v;
+    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
+    else if (v === false || v === null || v === undefined) continue;
+    else node.setAttribute(k, v);
+  }
+  for (const c of children.flat()) {
+    if (c == null || c === false) continue;
+    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  return node;
+}
+
+function weekIndexFromStart(startISO) {
+  const start = new Date(startISO);
+  const today = new Date();
+  const diff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+  return Math.min(11, Math.max(0, Math.floor(diff / 7)));
+}
+
+function dayIndexToday() {
+  const d = new Date().getDay();   // 0 Sun..6 Sat
+  return (d + 6) % 7;              // Mon=0..Sun=6
+}
+
+function plan() { return buildPlan(); }
+
+function sessionLabel(type) {
+  return { ride: "Ride", strength: "Strength", yoga: "Yoga", run: "Run", rope: "Flow Rope", rest: "Rest" }[type] || type;
+}
+
+/* ------------------------ AUTH ------------------------ */
+
+function renderAuth() {
+  let mode = "signin";
+  let email = "";
+  let password = "";
+
+  function render() {
+    const root = document.getElementById("root");
+    root.innerHTML = "";
+
+    const card = el("div", { class: "auth-card" },
+      el("div", { class: "logo" },
+        el("div", { class: "logo-mark", html: `<svg viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M3 19l5-9 3 5 4-7 6 11z'/></svg>` }),
+        el("div", {}, "RidgeLine")
+      ),
+      el("h1", {}, mode === "signin" ? "Welcome back, rider" : "Build your training base"),
+      el("p", { class: "muted small" }, "Personalized plans for mountain bikers. Strength, yoga, cycle, send."),
+      el("div", { class: "auth-tabs" },
+        el("button", { class: mode === "signin" ? "active" : "", onclick: () => { mode = "signin"; render(); } }, "Sign in"),
+        el("button", { class: mode === "signup" ? "active" : "", onclick: () => { mode = "signup"; render(); } }, "Create account"),
+      ),
+      el("div", { class: "field" },
+        el("label", {}, "Email"),
+        el("input", { type: "email", placeholder: "you@trail.com", value: email, oninput: e => email = e.target.value })
+      ),
+      el("div", { class: "field" },
+        el("label", {}, "Password"),
+        el("input", { type: "password", placeholder: "••••••••", value: password, oninput: e => password = e.target.value })
+      ),
+      el("button", {
+        class: "btn", style: "width:100%; justify-content:center;",
+        onclick: () => {
+          if (!email) return alert("Enter an email");
+          state = defaultState(email);
+          if (mode === "signin") state.onboarded = true;  // skip onboarding on sign in
+          saveState(state);
+          render_app();
+        }
+      }, mode === "signin" ? "Sign in" : "Create account"),
+      el("p", { class: "muted small", style: "margin-top:14px;text-align:center;" },
+        "Demo app — your data is saved locally on this device.")
+    );
+
+    root.appendChild(el("div", { class: "auth-wrap" }, card));
+  }
+  render();
+}
+
+/* ------------------------ ONBOARDING ------------------------ */
+
+function renderOnboarding() {
+  const root = document.getElementById("root");
+  root.innerHTML = "";
+  const u = state.user;
+
+  function commit() {
+    state.onboarded = true;
+    saveState(state);
+    render_app();
+  }
+
+  const card = el("div", { class: "auth-card", style: "max-width:520px" },
+    el("h2", {}, "Tell us about your riding"),
+    el("p", { class: "muted small" }, "We'll use this to shape your 12-week plan."),
+    el("hr"),
+    el("div", { class: "field" },
+      el("label", {}, "Your name"),
+      el("input", { value: u.name, oninput: e => u.name = e.target.value })
+    ),
+    el("div", { class: "field" },
+      el("label", {}, "Current level"),
+      el("select", { onchange: e => u.level = e.target.value },
+        ...["Beginner","Intermediate","Advanced","Expert"].map(o =>
+          el("option", { value: o, selected: o === u.level || false }, o)))
+    ),
+    el("div", { class: "field" },
+      el("label", {}, "Weekly training hours you can commit"),
+      el("input", { type: "number", min: 3, max: 20, value: u.weeklyHours, oninput: e => u.weeklyHours = +e.target.value })
+    ),
+    el("div", { class: "field" },
+      el("label", {}, "Primary goal"),
+      el("select", { onchange: e => u.goal = e.target.value },
+        ...["Race fitness","Trail-ready endurance","Get faster on local trails","Recover from injury","Just have fun"].map(o =>
+          el("option", { value: o, selected: o === u.goal || false }, o)))
+    ),
+    el("div", { class: "field" },
+      el("label", {}, "Race or target event date (optional)"),
+      el("input", { type: "date", value: u.raceDate || "", oninput: e => u.raceDate = e.target.value })
+    ),
+    el("div", { class: "row", style: "justify-content:flex-end; gap:10px; margin-top:10px;" },
+      el("button", { class: "btn", onclick: commit }, "Start training")
+    )
+  );
+  root.appendChild(el("div", { class: "auth-wrap" }, card));
+}
+
+/* ------------------------ APP SHELL ------------------------ */
+
+const NAV = [
+  { key: "dashboard", label: "Dashboard",   ico: "🏠" },
+  { key: "today",     label: "Today",        ico: "🎯" },
+  { key: "plan",      label: "Plan",         ico: "📅" },
+  { key: "coach",     label: "Coach AI",     ico: "🤖" },
+  { key: "checkin",   label: "Body Check-in", ico: "💚" },
+  { key: "skills",    label: "Skills Profile", ico: "📊" },
+  { key: "strength",  label: "Strength",     ico: "🏋️" },
+  { key: "yoga",      label: "Yoga & Mobility", ico: "🧘" },
+  { key: "run",       label: "Running",      ico: "🏃" },
+  { key: "rope",      label: "Flow Rope",    ico: "🪢" },
+  { key: "trails",    label: "Trails & Stats", ico: "🚵" },
+  { key: "videos",    label: "Videos",       ico: "🎥" },
+  { key: "profile",   label: "Profile",      ico: "⚙️" }
+];
+
+function render_app() {
+  if (!state) return renderAuth();
+  if (!state.onboarded) return renderOnboarding();
+
+  const root = document.getElementById("root");
+  root.innerHTML = "";
+
+  const sidebar = el("div", { class: "sidebar" },
+    el("div", { class: "logo", style: "padding:6px 10px 14px;border-bottom:1px solid var(--line); margin-bottom:6px;" },
+      el("div", { class: "logo-mark", html: `<svg viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M3 19l5-9 3 5 4-7 6 11z'/></svg>` }),
+      el("div", {}, "RidgeLine")
+    ),
+    el("div", { class: "nav" },
+      ...NAV.map(item =>
+        el("button", {
+          class: state.activeTab === item.key ? "active" : "",
+          onclick: () => { state.activeTab = item.key; saveState(state); render_app(); }
+        }, el("span", { class: "ico" }, item.ico), item.label)
+      )
+    ),
+    el("div", { class: "user-card" },
+      el("div", { class: "avatar" }, (state.user.name[0] || "?").toUpperCase()),
+      el("div", { style: "flex:1; min-width:0;" },
+        el("div", { style: "font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" }, state.user.name),
+        el("div", { class: "muted small", style: "overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" }, state.user.email)
+      ),
+      el("button", { class: "btn ghost sm", onclick: () => { localStorage.removeItem(STORE_KEY); state = null; renderAuth(); } }, "Log out")
+    )
+  );
+
+  const main = el("div", { class: "main" });
+  const tabRenderers = {
+    dashboard: renderDashboard,
+    plan:      renderPlan,
+    today:     renderToday,
+    coach:     renderCoach,
+    checkin:   renderCheckin,
+    skills:    renderSkills,
+    strength:  renderStrength,
+    yoga:      renderYoga,
+    run:       renderRun,
+    rope:      renderRope,
+    trails:    renderTrails,
+    videos:    renderVideos,
+    profile:   renderProfile
+  };
+  (tabRenderers[state.activeTab] || renderDashboard)(main);
+
+  root.appendChild(el("div", { class: "app" }, sidebar, main));
+}
+
+/* ------------------------ TABS ------------------------ */
+
+function renderDashboard(root) {
+  const wk = weekIndexFromStart(state.startedAt);
+  const week = plan()[wk];
+  const todayIdx = dayIndexToday();
+  const todayDay = week.days[todayIdx];
+
+  // stats
+  const totalSessions = plan().reduce((a, w) => a + w.days.reduce((b, d) => b + d.details.filter(s => s.type !== "rest").length, 0), 0);
+  const done = Object.keys(state.completed).filter(k => state.completed[k]).length;
+  const ridesLogged = state.rides.length;
+  const phase = PHASES.find(p => p.key === week.phase);
+
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Hey, " + state.user.name + " 👋"),
+      el("p", { class: "page-sub" }, "Week " + week.week + " of " + state.planWeeks + " —" + phase.name + " phase. " + phase.desc)
+    ),
+    el("button", { class: "btn", onclick: () => { state.activeTab = "today"; saveState(state); render_app(); } }, "Open today's workout")
+  ));
+
+  // stats row
+  root.appendChild(el("div", { class: "grid", style: "grid-template-columns:repeat(4,1fr); margin-bottom:18px;" },
+    el("div", { class: "stat" }, el("div", { class: "k" }, "Current week"), el("div", { class: "v" }, "" + week.week + "/" + state.planWeeks)),
+    el("div", { class: "stat" }, el("div", { class: "k" }, "Sessions done"), el("div", { class: "v" }, done + " / " + totalSessions)),
+    el("div", { class: "stat" }, el("div", { class: "k" }, "Rides logged"), el("div", { class: "v" }, "" + ridesLogged)),
+    el("div", { class: "stat" }, el("div", { class: "k" }, "Phase"), el("div", { class: "v" }, phase.name))
+  ));
+
+  // progress
+  const pct = totalSessions ? Math.round(100 * done / totalSessions) : 0;
+  root.appendChild(el("div", { class: "card", style: "margin-bottom:18px;" },
+    el("div", { class: "card-head" }, el("h2", {}, "Plan progress"), el("span", { class: "chip accent" }, pct + "% complete")),
+    el("div", { class: "progress" }, el("span", { style: "width:" + pct + "%" }))
+  ));
+
+  // Today preview
+  root.appendChild(el("div", { class: "card", style: "margin-bottom:18px;" },
+    el("div", { class: "card-head" },
+      el("h2", {}, "Today — " + todayDay.day),
+      el("span", { class: "chip" }, week.phaseName + " phase")
+    ),
+    todayDay.details.length === 0
+      ? el("p", { class: "muted" }, "Nothing programmed.")
+      : el("div", { class: "list" },
+          ...todayDay.details.map((s, idx) => {
+            const key = "w" + wk + "d" + todayIdx + "s" + idx;
+            const done = !!state.completed[key];
+            return el("div", { class: "list-item" + (done ? " " : "") },
+              el("div", { class: "tag " + s.type, style: "margin-top:2px;" }, sessionLabel(s.type)),
+              el("div", { style: "flex:1;" },
+                el("div", { class: "lead" + (done ? " " : "") }, s.name, done ? " ✓" : ""),
+                el("div", { class: "meta" }, s.notes)
+              ),
+              el("button", {
+                class: done ? "btn ghost sm" : "btn sm",
+                onclick: () => { state.completed[key] = !done; saveState(state); render_app(); }
+              }, done ? "Undo" : "Done")
+            );
+          })
+        )
+  ));
+
+  // Phase strip
+  root.appendChild(el("div", { class: "card" },
+    el("div", { class: "card-head" }, el("h2", {}, "Your 12-week journey")),
+    el("div", { class: "phase-strip" },
+      ...PHASES.map(p =>
+        el("div", { class: "phase" + (p.key === week.phase ? " active" : "") },
+          el("div", { class: "ph-name" }, p.name),
+          el("div", { class: "ph-meta" }, p.weeks + " wk" + (p.weeks > 1 ? "s" : ""))
+        )
+      )
+    )
+  ));
+}
+
+function renderPlan(root) {
+  const wk = weekIndexFromStart(state.startedAt);
+  const weeks = plan();
+
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, state.planWeeks + "-Week Plan"),
+      el("p", { class: "page-sub" }, "Periodized for MTB: base → build → peak → race → recovery.")
+    )
+  ));
+
+  // legend
+  root.appendChild(el("div", { class: "row wrap", style: "margin-bottom:14px;" },
+    el("span", { class: "tag ride" }, "Ride"),
+    el("span", { class: "tag strength" }, "Strength"),
+    el("span", { class: "tag yoga" }, "Yoga"),
+    el("span", { class: "tag run" }, "Run"),
+    el("span", { class: "tag rope" }, "Flow Rope"),
+    el("span", { class: "tag rest" }, "Rest")
+  ));
+
+  for (const w of weeks) {
+    root.appendChild(el("div", { class: "card", style: "margin-bottom:14px;" },
+      el("div", { class: "card-head" },
+        el("h2", {}, "Week " + w.week + " — " + w.phaseName),
+        w.week === wk + 1 ? el("span", { class: "chip accent" }, "Current") : null
+      ),
+      el("div", { class: "week-grid" },
+        ...w.days.map((d, idx) => {
+          const tags = d.details.length === 0
+            ? [el("span", { class: "tag rest" }, "Rest")]
+            : d.details.map(s => el("span", { class: "tag " + s.type }, sessionLabel(s.type)));
+          return el("div", {
+            class: "day",
+            onclick: () => openDayModal(w.week - 1, idx)
+          },
+            el("div", { class: "d-name" }, d.day),
+            el("div", { class: "d-sessions" }, ...tags),
+            el("div", { class: "small muted", style: "margin-top:auto;" }, d.details.map(s => s.name).join(" · ").slice(0, 60))
+          );
+        })
+      )
+    ));
+  }
+}
+
+function openDayModal(wIdx, dIdx) {
+  const week = plan()[wIdx];
+  const day = week.days[dIdx];
+
+  const bg = el("div", { class: "modal-bg", onclick: e => { if (e.target === bg) document.body.removeChild(bg); } });
+  const modal = el("div", { class: "modal" },
+    el("div", { class: "modal-head" },
+      el("div", {}, el("h2", {}, "Week " + week.week + " · " + day.day), el("div", { class: "muted small" }, week.phaseName + " phase")),
+      el("button", { class: "x", onclick: () => document.body.removeChild(bg) }, "✕")
+    ),
+    day.details.length === 0
+      ? el("p", { class: "muted" }, "Rest day. Walk, hydrate, sleep.")
+      : el("div", { class: "list" },
+          ...day.details.map((s, idx) => {
+            const key = "w" + wIdx + "d" + dIdx + "s" + idx;
+            const done = !!state.completed[key];
+            return el("div", { class: "list-item" },
+              el("div", { class: "tag " + s.type }, sessionLabel(s.type)),
+              el("div", { style: "flex:1;" },
+                el("div", { class: "lead" }, s.name),
+                el("div", { class: "meta" }, s.notes)
+              ),
+              el("button", {
+                class: done ? "btn ghost sm" : "btn sm",
+                onclick: () => {
+                  state.completed[key] = !done;
+                  saveState(state);
+                  document.body.removeChild(bg);
+                  render_app();
+                }
+              }, done ? "Undo" : "Mark done")
+            );
+          })
+        )
+  );
+  bg.appendChild(modal);
+  document.body.appendChild(bg);
+}
+
+function scaledSessionText(s, tweak) {
+  const mult = INTENSITY_MULT[tweak || state.user.intensity || "standard"];
+  // crude scaling: nudge any numeric in the name (e.g., "60 min", "4×8")
+  const scaled = s.name.replace(/(\d+)\s*(min|sec|mi|hr|×)/g, (m, n, u) => {
+    const v = Math.max(1, Math.round(+n * mult));
+    return v + " " + u;
+  });
+  return scaled;
+}
+
+function renderToday(root) {
+  const wk = weekIndexFromStart(state.startedAt);
+  const week = plan()[wk];
+  const todayIdx = dayIndexToday();
+  const day = week.days[todayIdx];
+
+  // pull latest check-in to suggest auto-adjustment
+  const latest = state.checkIns[state.checkIns.length - 1];
+  const todayCheckIn = latest && latest.date === new Date().toISOString().slice(0,10) ? latest : null;
+  const readiness = todayCheckIn ? (todayCheckIn.sleep + todayCheckIn.energy - todayCheckIn.soreness) : null;
+
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Today's workout"),
+      el("p", { class: "page-sub" }, "Week " + week.week + " · " + day.day + " · " + week.phaseName + " phase")
+    ),
+    el("div", { class: "row" },
+      el("span", { class: "chip" }, "Default intensity: " + state.user.intensity)
+    )
+  ));
+
+  if (todayCheckIn) {
+    let suggestion = "";
+    if (readiness !== null && readiness <= 3) suggestion = "Low readiness — coach suggests Easier today.";
+    else if (readiness !== null && readiness >= 8) suggestion = "Feeling great — push to Harder if motivated.";
+    else suggestion = "Stay on Standard. Build the habit.";
+    root.appendChild(el("div", { class: "card", style: "margin-bottom:14px; border-color: var(--accent);" },
+      el("div", { class: "row", style: "justify-content:space-between;" },
+        el("div", {}, el("strong", {}, "Check-in: "), el("span", { class: "muted" }, "sleep " + todayCheckIn.sleep + " / soreness " + todayCheckIn.soreness + " / energy " + todayCheckIn.energy)),
+        el("span", { class: "chip accent" }, suggestion)
+      )
+    ));
+  } else {
+    root.appendChild(el("div", { class: "card", style: "margin-bottom:14px;" },
+      el("div", { class: "row", style: "justify-content:space-between;" },
+        el("div", { class: "muted small" }, "No body check-in for today. Logging one will auto-tune your workout."),
+        el("button", { class: "btn ghost sm", onclick: () => { state.activeTab = "checkin"; saveState(state); render_app(); } }, "Open check-in")
+      )
+    ));
+  }
+
+  if (day.details.length === 0) {
+    root.appendChild(el("div", { class: "card" }, el("p", {}, "Rest day. Hydrate, sleep, foam-roll.")));
+    return;
+  }
+
+  for (let i = 0; i < day.details.length; i++) {
+    const s = day.details[i];
+    const key = "w" + wk + "d" + todayIdx + "s" + i;
+    const done = !!state.completed[key];
+    const tweak = state.sessionTweaks[key] || state.user.intensity || "standard";
+    const skipped = tweak === "skipped";
+    const display = skipped ? "(skipped) " + s.name : scaledSessionText(s, tweak === "skipped" ? null : tweak);
+
+    root.appendChild(el("div", { class: "card", style: "margin-bottom:12px;" + (skipped ? " opacity:.6;" : "") },
+      el("div", { class: "card-head" },
+        el("div", { class: "row" }, el("span", { class: "tag " + s.type }, sessionLabel(s.type)), el("h2", {}, display)),
+        el("button", { class: done ? "btn ghost sm" : "btn sm", onclick: () => { state.completed[key] = !done; saveState(state); render_app(); } }, done ? "Undo" : "Mark done")
+      ),
+      el("p", { class: "muted" }, s.notes),
+      // Intensity / skip controls
+      el("div", { class: "row wrap", style: "gap:6px; margin-top:8px;" },
+        ...["easier","standard","harder"].map(opt =>
+          el("button", {
+            class: "btn sm " + (tweak === opt ? "" : "ghost"),
+            onclick: () => { state.sessionTweaks[key] = opt; saveState(state); render_app(); }
+          }, opt.charAt(0).toUpperCase() + opt.slice(1))
+        ),
+        el("button", {
+          class: "btn sm " + (skipped ? "danger" : "ghost"),
+          onclick: () => { state.sessionTweaks[key] = skipped ? "standard" : "skipped"; saveState(state); render_app(); }
+        }, skipped ? "Un-skip" : "Skip"),
+        el("button", { class: "btn ghost sm", onclick: () => openSwapModal(wk, todayIdx, i) }, "Swap session")
+      ),
+      el("div", { class: "row wrap", style: "margin-top:8px;" },
+        s.type === "strength" ? el("button", { class: "btn ghost sm", onclick: () => { state.activeTab = "strength"; saveState(state); render_app(); } }, "Open strength") : null,
+        s.type === "yoga"     ? el("button", { class: "btn ghost sm", onclick: () => { state.activeTab = "yoga"; saveState(state); render_app(); } }, "Open yoga") : null,
+        s.type === "rope"     ? el("button", { class: "btn ghost sm", onclick: () => { state.activeTab = "rope"; saveState(state); render_app(); } }, "Open flow rope") : null,
+        s.type === "ride"     ? el("button", { class: "btn ghost sm", onclick: () => { state.activeTab = "trails"; saveState(state); render_app(); } }, "Log this ride") : null,
+        el("button", { class: "btn ghost sm", onclick: () => { state.activeTab = "coach"; saveState(state); render_app(); } }, "Ask coach AI")
+      )
+    ));
+  }
+}
+
+function openSwapModal(wIdx, dIdx, sIdx) {
+  const opts = ["ride","strength","yoga","run","rope","rest"];
+  const bg = el("div", { class: "modal-bg", onclick: e => { if (e.target === bg) document.body.removeChild(bg); } });
+  const modal = el("div", { class: "modal" },
+    el("div", { class: "modal-head" }, el("h2", {}, "Swap session"), el("button", { class: "x", onclick: () => document.body.removeChild(bg) }, "✕")),
+    el("p", { class: "muted small" }, "Replace this session with something else for today only."),
+    el("div", { class: "stack" },
+      ...opts.map(o =>
+        el("button", { class: "btn ghost", onclick: () => {
+          const key = "w" + wIdx + "d" + dIdx + "s" + sIdx + "_swap";
+          state.sessionTweaks[key] = o;
+          // overlay onto plan via a render hint: store swapped type
+          state.sessionTweaks["w" + wIdx + "d" + dIdx + "s" + sIdx + "_type"] = o;
+          saveState(state);
+          document.body.removeChild(bg);
+          render_app();
+        } }, sessionLabel(o))
+      )
+    )
+  );
+  bg.appendChild(modal);
+  document.body.appendChild(bg);
+}
+
+/* ---- COACH AI ---- */
+
+function coachReply(userText) {
+  const t = userText.toLowerCase();
+  if (/sore|tired|fatigue|rest|recover/.test(t)) {
+    return "Sounds like you need recovery. I'd swap today's hard ride for a 20-minute restorative yoga session and 15 minutes of easy spinning. Tomorrow, reassess. Sleep is the cheapest training tool you've got — aim for 8+ hours.";
+  }
+  if (/race|event|peak/.test(t)) {
+    return "For a race in 8 weeks: 4 weeks of build with 2 hard rides/week + 1 strength day, then a 2-week peak with race-specific intervals and openers, then a 1-week taper. Cut volume 40% in race week. Test nutrition during long rides — don't change anything new on race day.";
+  }
+  if (/corner|cornering|loose|skid/.test(t)) {
+    return "Cornering on loose dirt: weight your outside pedal hard (12 o'clock outside foot down). Look through the corner, not at the front wheel. Lean the bike more than your body. Brake before — never during — the apex. Drill: find one corner and rail it 20 times in a row. Boring, transformative.";
+  }
+  if (/back|spine|low back/.test(t)) {
+    return "Low-back routine (20 min): cat-cow 1 min · child's pose 1 min · seated forward fold 90 sec · supine twist 90 sec/side · figure-4 stretch 90 sec/side · pigeon 2 min/side · legs-up-the-wall 5 min. Do this 3x this week.";
+  }
+  if (/indoor|trainer|zwift|rain/.test(t)) {
+    return "Indoor swap: 60-min trainer session. 15 min easy → 4×8 min at threshold (RPE 7–8) with 4 min easy between → 10 min cool-down. Pick a virtual climb and treat it as terrain practice.";
+  }
+  if (/climb|hill/.test(t)) {
+    return "Technical climb work: 30-min seated tempo on rolling terrain, focus on staying seated until the gradient demands standing. Drill: pick a 3-min climb you struggle with, ride it 5 times with 5 min recovery. Watch where your eyes go — look up the trail, not at the rock in front of you.";
+  }
+  if (/descent|downhill|fast|speed/.test(t)) {
+    return "Descents come down to vision and body position. Heels down, elbows wide, hips back over the saddle on steep stuff. Scan 2 corners ahead. Practice: ride your favorite descent at 80% pace 3x in a row to lock in lines, then attack it once.";
+  }
+  if (/plan|customize|adapt|change/.test(t)) {
+    return "Open Profile → switch your rider preset (Novice/Sport/Pro), change weekly hours, and pick a plan length (8/12/16 weeks). For deeper tuning, rate yourself in Skills Profile — I'll bias your plan toward your weakest skill that matters for your goal.";
+  }
+  return "Got it. To give you a precise answer, I'd want to know: your current week, recent check-in score, and goal. In the meantime — small consistent training beats heroic one-off efforts. What's the most specific question on your mind today?";
+}
+
+async function callRealAI(message) {
+  // Optional: real LLM call if user has provided an API key in Profile.
+  if (state.aiProvider === "anthropic" && state.aiApiKey) {
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": state.aiApiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 600,
+          system: "You are an expert mountain biking coach. The athlete is " + state.user.name + " (" + state.user.preset + " preset, " + state.user.weeklyHours + " hrs/week, goal: " + state.user.goal + "). Keep responses concrete, actionable, and short. Use mountain biking specifics.",
+          messages: [{ role: "user", content: message }]
+        })
+      });
+      const data = await res.json();
+      return (data && data.content && data.content[0] && data.content[0].text) || ("API error: " + JSON.stringify(data));
+    } catch (e) {
+      return "API call failed: " + e.message + ". Falling back to local coach.";
+    }
+  }
+  return coachReply(message);
+}
+
+function renderCoach(root) {
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Coach AI"),
+      el("p", { class: "page-sub" }, "Ask anything about your training. Connect your own AI key in Profile for advanced answers.")
+    ),
+    el("span", { class: "chip " + (state.aiProvider === "local" ? "" : "green") },
+      state.aiProvider === "local" ? "Local coach" : "Live AI (" + state.aiProvider + ")")
+  ));
+
+  const log = el("div", { class: "card", style: "margin-bottom:14px; min-height:240px; max-height:50vh; overflow-y:auto;" });
+  function paintLog() {
+    log.innerHTML = "";
+    if (state.aiMessages.length === 0) {
+      log.appendChild(el("p", { class: "muted" }, "Try one of the suggestions below to get started."));
+      return;
+    }
+    for (const m of state.aiMessages) {
+      log.appendChild(el("div", {
+        style: "padding:10px 12px; border-radius:10px; margin-bottom:8px; max-width: 88%;"
+          + (m.role === "user"
+              ? "background:rgba(255,122,41,.15); border:1px solid rgba(255,122,41,.4); margin-left:auto;"
+              : "background:var(--panel-2); border:1px solid var(--line);")
+      },
+        el("div", { class: "small muted", style: "margin-bottom:4px;" }, m.role === "user" ? "You" : "🤖 Coach"),
+        el("div", {}, m.text)
+      ));
+    }
+  }
+  paintLog();
+  root.appendChild(log);
+
+  // Suggestions
+  root.appendChild(el("div", { class: "row wrap", style: "margin-bottom:12px;" },
+    ...AI_PROMPTS.map(p =>
+      el("button", { class: "btn ghost sm", onclick: () => { input.value = p; } }, p)
+    )
+  ));
+
+  // Input row
+  const input = el("input", { placeholder: "Ask the coach…", onkeydown: e => { if (e.key === "Enter") send(); } });
+  async function send() {
+    const text = (input.value || "").trim();
+    if (!text) return;
+    state.aiMessages.push({ role: "user", text, ts: Date.now() });
+    paintLog();
+    input.value = "Thinking…";
+    input.disabled = true;
+    saveState(state);
+    const reply = await callRealAI(text);
+    state.aiMessages.push({ role: "coach", text: reply, ts: Date.now() });
+    saveState(state);
+    input.value = "";
+    input.disabled = false;
+    paintLog();
+    log.scrollTop = log.scrollHeight;
+  }
+  root.appendChild(el("div", { class: "row" },
+    el("div", { style: "flex:1;" }, input),
+    el("button", { class: "btn", onclick: send }, "Send"),
+    el("button", { class: "btn ghost", onclick: () => { state.aiMessages = []; saveState(state); render_app(); } }, "Clear")
+  ));
+}
+
+/* ---- BODY CHECK-IN ---- */
+
+function renderCheckin(root) {
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Body Check-in"),
+      el("p", { class: "page-sub" }, "30-second daily form. Your check-in shifts today's intensity automatically.")
+    )
+  ));
+
+  const today = new Date().toISOString().slice(0,10);
+  let draft = state.checkIns.find(c => c.date === today) || { date: today, sleep: 7, soreness: 3, energy: 6, notes: "" };
+
+  function slider(label, value, min, max, onchange, hint) {
+    const el_ = el("div", { class: "field" },
+      el("label", {}, label + " — " + value + (hint ? " (" + hint + ")" : "")),
+      el("input", { type: "range", min, max, value, oninput: e => { onchange(+e.target.value); render_app(); } })
+    );
+    return el_;
+  }
+
+  root.appendChild(el("div", { class: "card", style: "margin-bottom:14px;" },
+    el("h2", {}, "How are you feeling today?"),
+    slider("Sleep quality", draft.sleep, 1, 10, v => draft.sleep = v, "1=awful, 10=great"),
+    slider("Soreness", draft.soreness, 1, 10, v => draft.soreness = v, "1=fresh, 10=wrecked"),
+    slider("Energy", draft.energy, 1, 10, v => draft.energy = v, "1=flat, 10=fired up"),
+    el("div", { class: "field" }, el("label", {}, "Notes"), el("textarea", { rows: 2, oninput: e => draft.notes = e.target.value }, draft.notes)),
+    el("button", { class: "btn", onclick: () => {
+      state.checkIns = state.checkIns.filter(c => c.date !== today).concat([draft]);
+      saveState(state);
+      alert("Check-in saved.");
+      render_app();
+    } }, "Save check-in")
+  ));
+
+  // History
+  root.appendChild(el("div", { class: "card" },
+    el("h2", {}, "Recent check-ins"),
+    state.checkIns.length === 0
+      ? el("p", { class: "muted" }, "No history yet.")
+      : el("table", {},
+          el("thead", {}, el("tr", {}, el("th", {}, "Date"), el("th", {}, "Sleep"), el("th", {}, "Soreness"), el("th", {}, "Energy"), el("th", {}, "Notes"))),
+          el("tbody", {}, ...state.checkIns.slice().reverse().slice(0, 14).map(c =>
+            el("tr", {},
+              el("td", {}, c.date),
+              el("td", {}, "" + c.sleep),
+              el("td", {}, "" + c.soreness),
+              el("td", {}, "" + c.energy),
+              el("td", { class: "muted" }, c.notes || "")
+            )
+          ))
+        )
+  ));
+}
+
+/* ---- SKILLS PROFILE ---- */
+
+function renderSkills(root) {
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Skills Profile"),
+      el("p", { class: "page-sub" }, "Rate yourself 1–10. Pick 2–4 skills to emphasize — your plan tilts toward them.")
+    )
+  ));
+
+  root.appendChild(el("div", { class: "grid", style: "grid-template-columns:repeat(2,1fr); gap:14px;" },
+    ...SKILLS.map(skill => {
+      const v = state.skills[skill.key];
+      const focused = state.focusSkills.includes(skill.key);
+      return el("div", { class: "card tight" },
+        el("div", { class: "row", style: "justify-content:space-between;" },
+          el("div", {},
+            el("div", { style: "font-weight:700;" }, skill.label),
+            el("div", { class: "muted small" }, skill.desc)
+          ),
+          el("button", {
+            class: "btn sm " + (focused ? "" : "ghost"),
+            onclick: () => {
+              if (focused) state.focusSkills = state.focusSkills.filter(k => k !== skill.key);
+              else if (state.focusSkills.length < 4) state.focusSkills.push(skill.key);
+              else return alert("Max 4 focus skills. Remove one first.");
+              saveState(state); render_app();
+            }
+          }, focused ? "Focused ★" : "Focus")
+        ),
+        el("input", { type: "range", min: 1, max: 10, value: v, oninput: e => { state.skills[skill.key] = +e.target.value; saveState(state); render_app(); } }),
+        el("div", { class: "progress", style: "margin-top:6px;" }, el("span", { style: "width:" + (v * 10) + "%" })),
+        el("div", { class: "row", style: "justify-content:space-between; margin-top:4px;" },
+          el("span", { class: "muted small" }, "Level " + v + " / 10"),
+          el("span", { class: "small muted" }, v <= 3 ? "Novice" : v <= 6 ? "Intermediate" : v <= 8 ? "Advanced" : "Pro")
+        )
+      );
+    })
+  ));
+
+  root.appendChild(el("div", { class: "card", style: "margin-top:14px;" },
+    el("h2", {}, "How focus skills shape your plan"),
+    el("p", { class: "muted small" },
+      "Focused skills bias your plan. Endurance → more Z2 volume. Power → more intervals. Cornering/descents/drops → more skills clinics & rope work. Mobility → more yoga. Strength → extra lift day.")
+  ));
+}
+
+/* ---- VIDEOS ---- */
+
+function renderVideos(root) {
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Videos"),
+      el("p", { class: "page-sub" }, "Ride POV · form-check · technique reference. Upload your own or paste a YouTube link.")
+    ),
+    el("div", { class: "row" },
+      el("button", { class: "btn ghost", onclick: openAddVideoLinkModal }, "+ Add YouTube link"),
+      el("button", { class: "btn", onclick: () => fileInput.click() }, "+ Upload video")
+    )
+  ));
+
+  const fileInput = el("input", { type: "file", accept: "video/*", style: "display:none;", onchange: e => {
+    const f = e.target.files[0]; if (!f) return;
+    const url = URL.createObjectURL(f);
+    const id = "v" + Date.now();
+    state.videos.push({ id, name: f.name, type: "Ride POV", url, kind: "upload", notes: "", date: new Date().toISOString().slice(0,10) });
+    saveState(state); render_app();
+  } });
+  root.appendChild(fileInput);
+
+  if (state.videos.length === 0) {
+    root.appendChild(el("div", { class: "card" }, el("p", { class: "muted" }, "No videos yet. Upload a ride POV to review your line choice, a squat form check, or paste a YouTube tutorial for reference.")));
+    return;
+  }
+
+  root.appendChild(el("div", { class: "grid", style: "grid-template-columns: 1fr 1fr; gap:14px;" },
+    ...state.videos.map(v => {
+      let player;
+      if (v.kind === "youtube") {
+        player = el("iframe", { src: v.url, frameborder: 0, allowfullscreen: true, style: "width:100%; aspect-ratio:16/9; border-radius:10px; border:0;" });
+      } else {
+        player = el("video", { controls: true, src: v.url, style: "width:100%; border-radius:10px; background:#000;" });
+      }
+      return el("div", { class: "card tight" },
+        player,
+        el("div", { class: "row", style: "justify-content:space-between; margin-top:8px;" },
+          el("div", {},
+            el("div", { style: "font-weight:600;" }, v.name),
+            el("div", { class: "muted small" }, v.type + " · " + v.date)
+          ),
+          el("div", { class: "row" },
+            el("select", { onchange: e => { v.type = e.target.value; saveState(state); } },
+              ...["Ride POV","Form check","Tutorial","Race","Other"].map(o => el("option", { value: o, selected: o === v.type || false }, o))
+            ),
+            el("button", { class: "btn ghost sm", onclick: () => {
+              state.videos = state.videos.filter(x => x !== v);
+              saveState(state); render_app();
+            } }, "Delete")
+          )
+        ),
+        el("textarea", { rows: 2, placeholder: "Notes & timestamps (e.g., '0:42 — front wheel washed in loose corner')", oninput: e => { v.notes = e.target.value; saveState(state); }, style: "margin-top:6px;" }, v.notes || "")
+      );
+    })
+  ));
+}
+
+function openAddVideoLinkModal() {
+  let url = "", name = "", type = "Tutorial";
+  const bg = el("div", { class: "modal-bg", onclick: e => { if (e.target === bg) document.body.removeChild(bg); } });
+  const modal = el("div", { class: "modal" },
+    el("div", { class: "modal-head" }, el("h2", {}, "Add YouTube link"), el("button", { class: "x", onclick: () => document.body.removeChild(bg) }, "✕")),
+    el("div", { class: "field" }, el("label", {}, "YouTube URL or embed URL"), el("input", { placeholder: "https://www.youtube.com/watch?v=...", oninput: e => url = e.target.value })),
+    el("div", { class: "field" }, el("label", {}, "Name"), el("input", { oninput: e => name = e.target.value })),
+    el("div", { class: "field" }, el("label", {}, "Type"),
+      el("select", { onchange: e => type = e.target.value }, ...["Tutorial","Ride POV","Form check","Race","Other"].map(o => el("option", { value: o, selected: o === type || false }, o)))),
+    el("div", { class: "row", style: "justify-content:flex-end;" },
+      el("button", { class: "btn ghost", onclick: () => document.body.removeChild(bg) }, "Cancel"),
+      el("button", { class: "btn", onclick: () => {
+        if (!url) return alert("Paste a URL.");
+        // Convert watch URL to embed
+        const m = url.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{6,})/);
+        const embed = m ? "https://www.youtube.com/embed/" + m[1] : url;
+        state.videos.push({
+          id: "v" + Date.now(), name: name || "Untitled video", type, url: embed, kind: "youtube",
+          notes: "", date: new Date().toISOString().slice(0,10)
+        });
+        saveState(state);
+        document.body.removeChild(bg);
+        render_app();
+      } }, "Add")
+    )
+  );
+  bg.appendChild(modal);
+  document.body.appendChild(bg);
+}
+
+
+function renderStrength(root) {
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Strength Training"),
+      el("p", { class: "page-sub" }, "Cycling-specific lifts to add power, durability, and resist injury.")
+    )
+  ));
+
+  for (const w of STRENGTH_WORKOUTS) {
+    root.appendChild(el("div", { class: "card", style: "margin-bottom:14px;" },
+      el("h2", {}, w.name),
+      el("table", {},
+        el("thead", {}, el("tr", {}, el("th", {}, "Exercise"), el("th", {}, "Sets × Reps"), el("th", {}, "Notes"))),
+        el("tbody", {}, ...w.blocks.map(b =>
+          el("tr", {}, el("td", {}, b.name), el("td", {}, b.sets), el("td", { class: "muted" }, b.note))
+        ))
+      )
+    ));
+  }
+}
+
+function renderYoga(root) {
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Yoga & Mobility"),
+      el("p", { class: "page-sub" }, "Pre-ride dynamic warm-up + post-ride restorative. Hips, spine, chest, shoulders.")
+    )
+  ));
+
+  root.appendChild(el("div", { class: "grid", style: "grid-template-columns:1fr 1fr;" },
+    el("div", { class: "card" },
+      el("div", { class: "card-head" }, el("h2", {}, "Pre-Ride Warm-up"), el("span", { class: "chip green" }, "Dynamic")),
+      el("div", { class: "stack" },
+        ...YOGA_WARMUP.map((p, i) =>
+          el("div", { class: "pose" },
+            el("div", { class: "pn" }, "" + (i + 1)),
+            el("div", { style: "flex:1;" },
+              el("div", { style: "font-weight:600;" }, p.name),
+              el("div", { class: "pose-meta" }, p.reps + " — " + p.why)
+            )
+          )
+        )
+      )
+    ),
+    el("div", { class: "card" },
+      el("div", { class: "card-head" }, el("h2", {}, "Post-Ride Recovery"), el("span", { class: "chip green" }, "Restorative")),
+      el("div", { class: "stack" },
+        ...YOGA_RECOVERY.map((p, i) =>
+          el("div", { class: "pose" },
+            el("div", { class: "pn" }, "" + (i + 1)),
+            el("div", { style: "flex:1;" },
+              el("div", { style: "font-weight:600;" }, p.name),
+              el("div", { class: "pose-meta" }, p.reps + " — " + p.why)
+            )
+          )
+        )
+      )
+    )
+  ));
+}
+
+function renderRun(root) {
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Running (Cross-training)"),
+      el("p", { class: "page-sub" }, "Aerobic base + tendon health, without the pounding of heavy mileage.")
+    )
+  ));
+
+  const sessions = [
+    { name: "Easy aerobic run",        time: "30–40 min", note: "Nasal-breathing pace. Recover, don't tax." },
+    { name: "Trail jog",               time: "20–30 min", note: "Soft surface. Easier on knees than road." },
+    { name: "Stride intervals",        time: "20 min + 6×30 sec strides", note: "Form work. Not a workout." },
+    { name: "Hill repeats (post-base)", time: "5×60 sec uphill", note: "Walk down. Builds glute/hamstring power." }
+  ];
+
+  root.appendChild(el("div", { class: "card" },
+    el("h2", {}, "Run sessions"),
+    el("p", { class: "muted small" }, "Running is supplemental — 1–2× per week max during base & build."),
+    el("hr"),
+    el("div", { class: "list" },
+      ...sessions.map(s =>
+        el("div", { class: "list-item" },
+          el("div", { class: "tag run" }, "Run"),
+          el("div", { style: "flex:1;" },
+            el("div", { class: "lead" }, s.name + " — " + s.time),
+            el("div", { class: "meta" }, s.note)
+          )
+        )
+      )
+    )
+  ));
+}
+
+function renderRope(root) {
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Flow Rope Work"),
+      el("p", { class: "page-sub" }, "Active mobility, coordination, and timing — translates directly to bike handling.")
+    )
+  ));
+
+  root.appendChild(el("div", { class: "card" },
+    el("h2", {}, "15-minute flow rope session"),
+    el("p", { class: "muted small" }, "Use a weighted flow rope (or jump rope with looser grip). Move smoothly — no death-gripping."),
+    el("hr"),
+    el("div", { class: "stack" },
+      ...FLOW_ROPE_DRILLS.map((d, i) =>
+        el("div", { class: "pose" },
+          el("div", { class: "pn", style: "background:rgba(232,114,98,.2); color:var(--red);" }, "" + (i + 1)),
+          el("div", { style: "flex:1;" },
+            el("div", { style: "font-weight:600;" }, d.name + "  ·  " + d.time),
+            el("div", { class: "pose-meta" }, d.focus)
+          )
+        )
+      )
+    )
+  ));
+}
+
+function renderTrails(root) {
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Trails & Stats"),
+      el("p", { class: "page-sub" }, "Log rides, track PRs, get faster on the trails you ride most.")
+    ),
+    el("button", { class: "btn", onclick: openLogRideModal }, "+ Log a ride")
+  ));
+
+  // Stats summary
+  const totalMiles = state.rides.reduce((a, r) => a + (+r.miles || 0), 0).toFixed(1);
+  const totalElev = state.rides.reduce((a, r) => a + (+r.elev || 0), 0);
+  const totalMin = state.rides.reduce((a, r) => a + (+r.minutes || 0), 0);
+  root.appendChild(el("div", { class: "grid", style: "grid-template-columns:repeat(3,1fr); margin-bottom:18px;" },
+    el("div", { class: "stat" }, el("div", { class: "k" }, "Total distance"), el("div", { class: "v" }, totalMiles + " mi")),
+    el("div", { class: "stat" }, el("div", { class: "k" }, "Total elevation"), el("div", { class: "v" }, totalElev + " ft")),
+    el("div", { class: "stat" }, el("div", { class: "k" }, "Saddle time"), el("div", { class: "v" }, Math.round(totalMin / 60) + " hr"))
+  ));
+
+  // Trails
+  root.appendChild(el("div", { class: "card", style: "margin-bottom:18px;" },
+    el("div", { class: "card-head" }, el("h2", {}, "Your trails"), el("button", { class: "btn ghost sm", onclick: openAddTrailModal }, "+ Add trail")),
+    el("table", {},
+      el("thead", {}, el("tr", {},
+        el("th", {}, "Trail"),
+        el("th", {}, "Length"),
+        el("th", {}, "Elev gain"),
+        el("th", {}, "Difficulty"),
+        el("th", {}, "PR"),
+        el("th", {}, "Last ridden")
+      )),
+      el("tbody", {}, ...state.trails.map((t, idx) =>
+        el("tr", {},
+          el("td", {}, t.name),
+          el("td", {}, t.length + " mi"),
+          el("td", {}, t.elev + " ft"),
+          el("td", {}, el("span", { class: "chip" }, t.difficulty)),
+          el("td", {}, t.prMin ? t.prMin + " min" : el("span", { class: "muted" }, "—")),
+          el("td", { class: "muted" }, t.lastRideISO || "—")
+        )
+      ))
+    )
+  ));
+
+  // Recent rides
+  root.appendChild(el("div", { class: "card" },
+    el("h2", {}, "Recent rides"),
+    state.rides.length === 0
+      ? el("p", { class: "muted" }, "No rides logged yet. Tap '+ Log a ride' to add your first.")
+      : el("table", {},
+          el("thead", {}, el("tr", {},
+            el("th", {}, "Date"),
+            el("th", {}, "Trail"),
+            el("th", {}, "Distance"),
+            el("th", {}, "Elev"),
+            el("th", {}, "Time"),
+            el("th", {}, "Feel"),
+            el("th", {}, "")
+          )),
+          el("tbody", {}, ...state.rides.slice().reverse().map((r) => {
+            return el("tr", {},
+              el("td", {}, r.date),
+              el("td", {}, r.trail || "—"),
+              el("td", {}, r.miles + " mi"),
+              el("td", {}, r.elev + " ft"),
+              el("td", {}, r.minutes + " min"),
+              el("td", {}, "⭐".repeat(r.feel || 0)),
+              el("td", {}, el("button", {
+                class: "btn ghost sm",
+                onclick: () => {
+                  state.rides = state.rides.filter(x => x !== r);
+                  saveState(state); render_app();
+                }
+              }, "Delete"))
+            );
+          }))
+        )
+  ));
+}
+
+function openLogRideModal() {
+  const today = new Date().toISOString().slice(0,10);
+  const ride = { date: today, trail: state.trails[0] ? state.trails[0].name : "", miles: "", elev: "", minutes: "", feel: 3, notes: "" };
+
+  const bg = el("div", { class: "modal-bg", onclick: e => { if (e.target === bg) document.body.removeChild(bg); } });
+  const modal = el("div", { class: "modal" },
+    el("div", { class: "modal-head" }, el("h2", {}, "Log a ride"), el("button", { class: "x", onclick: () => document.body.removeChild(bg) }, "✕")),
+    el("div", { class: "field" }, el("label", {}, "Date"), el("input", { type: "date", value: ride.date, oninput: e => ride.date = e.target.value })),
+    el("div", { class: "field" }, el("label", {}, "Trail"),
+      el("select", { onchange: e => ride.trail = e.target.value },
+        ...state.trails.map(t => el("option", { value: t.name }, t.name)),
+        el("option", { value: "" }, "(other)")
+      )
+    ),
+    el("div", { class: "row" },
+      el("div", { class: "field", style: "flex:1;" }, el("label", {}, "Miles"), el("input", { type: "number", step: "0.1", oninput: e => ride.miles = e.target.value })),
+      el("div", { class: "field", style: "flex:1;" }, el("label", {}, "Elev (ft)"), el("input", { type: "number", oninput: e => ride.elev = e.target.value })),
+      el("div", { class: "field", style: "flex:1;" }, el("label", {}, "Time (min)"), el("input", { type: "number", oninput: e => ride.minutes = e.target.value }))
+    ),
+    el("div", { class: "field" }, el("label", {}, "Feel (1–5)"),
+      el("select", { onchange: e => ride.feel = +e.target.value },
+        ...[1,2,3,4,5].map(n => el("option", { value: n, selected: n === ride.feel || false }, "⭐".repeat(n)))
+      )
+    ),
+    el("div", { class: "field" }, el("label", {}, "Notes"), el("textarea", { rows: 2, oninput: e => ride.notes = e.target.value })),
+    el("div", { class: "row", style: "justify-content:flex-end; margin-top:10px;" },
+      el("button", { class: "btn ghost", onclick: () => document.body.removeChild(bg) }, "Cancel"),
+      el("button", { class: "btn", onclick: () => {
+        if (!ride.miles || !ride.minutes) return alert("Add miles and time.");
+        state.rides.push(ride);
+        // Update trail PR
+        const t = state.trails.find(t => t.name === ride.trail);
+        if (t) {
+          t.lastRideISO = ride.date;
+          const min = +ride.minutes;
+          if (!t.prMin || min < t.prMin) t.prMin = min;
+        }
+        saveState(state);
+        document.body.removeChild(bg);
+        render_app();
+      } }, "Save ride")
+    )
+  );
+  bg.appendChild(modal);
+  document.body.appendChild(bg);
+}
+
+function openAddTrailModal() {
+  const trail = { name: "", length: "", elev: "", difficulty: "Blue", region: "Local", prMin: null, lastRideISO: null };
+
+  const bg = el("div", { class: "modal-bg", onclick: e => { if (e.target === bg) document.body.removeChild(bg); } });
+  const modal = el("div", { class: "modal" },
+    el("div", { class: "modal-head" }, el("h2", {}, "Add a trail"), el("button", { class: "x", onclick: () => document.body.removeChild(bg) }, "✕")),
+    el("div", { class: "field" }, el("label", {}, "Name"), el("input", { oninput: e => trail.name = e.target.value })),
+    el("div", { class: "row" },
+      el("div", { class: "field", style: "flex:1;" }, el("label", {}, "Length (mi)"), el("input", { type: "number", step: "0.1", oninput: e => trail.length = +e.target.value })),
+      el("div", { class: "field", style: "flex:1;" }, el("label", {}, "Elev (ft)"), el("input", { type: "number", oninput: e => trail.elev = +e.target.value })),
+    ),
+    el("div", { class: "field" }, el("label", {}, "Difficulty"),
+      el("select", { onchange: e => trail.difficulty = e.target.value },
+        ...["Green","Blue","Black","Double Black"].map(d => el("option", { value: d, selected: d === trail.difficulty || false }, d))
+      )
+    ),
+    el("div", { class: "field" }, el("label", {}, "Region"),
+      el("select", { onchange: e => trail.region = e.target.value },
+        ...["Local","Travel","Bucket list"].map(d => el("option", { value: d, selected: d === trail.region || false }, d))
+      )
+    ),
+    el("div", { class: "row", style: "justify-content:flex-end;" },
+      el("button", { class: "btn ghost", onclick: () => document.body.removeChild(bg) }, "Cancel"),
+      el("button", { class: "btn", onclick: () => {
+        if (!trail.name) return alert("Name the trail.");
+        state.trails.push(trail);
+        saveState(state);
+        document.body.removeChild(bg);
+        render_app();
+      } }, "Add trail")
+    )
+  );
+  bg.appendChild(modal);
+  document.body.appendChild(bg);
+}
+
+function renderProfile(root) {
+  const u = state.user;
+  root.appendChild(el("div", { class: "page-head" },
+    el("div", {},
+      el("h1", { class: "page-title" }, "Profile & settings"),
+      el("p", { class: "page-sub" }, "Tune your plan to your reality.")
+    )
+  ));
+
+  root.appendChild(el("div", { class: "card", style: "margin-bottom:14px;" },
+    el("h2", {}, "Rider"),
+    el("hr"),
+    el("div", { class: "field" }, el("label", {}, "Name"), el("input", { value: u.name, oninput: e => { u.name = e.target.value; saveState(state); } })),
+    el("div", { class: "field" }, el("label", {}, "Email"), el("input", { value: u.email, disabled: true })),
+    el("div", { class: "field" }, el("label", {}, "Rider preset — applies sensible defaults"),
+      el("select", { onchange: e => {
+        u.preset = e.target.value;
+        const p = RIDER_PRESETS[u.preset];
+        if (p) { u.weeklyHours = p.weeklyHours; u.intensity = p.intensity; state.focusSkills = p.focus.slice(); }
+        saveState(state); render_app();
+      } },
+        ...["Novice","Sport","Pro"].map(o => el("option", { value: o, selected: o === u.preset || false }, o + " preset")))
+    ),
+    el("div", { class: "field" }, el("label", {}, "Level (display)"),
+      el("select", { onchange: e => { u.level = e.target.value; saveState(state); } },
+        ...["Beginner","Intermediate","Advanced","Expert"].map(o => el("option", { value: o, selected: o === u.level || false }, o)))
+    ),
+    el("div", { class: "row" },
+      el("div", { class: "field", style: "flex:1;" }, el("label", {}, "Weekly hours"), el("input", { type: "number", value: u.weeklyHours, oninput: e => { u.weeklyHours = +e.target.value; saveState(state); } })),
+      el("div", { class: "field", style: "flex:1;" }, el("label", {}, "Default intensity"),
+        el("select", { onchange: e => { u.intensity = e.target.value; saveState(state); render_app(); } },
+          ...["easier","standard","harder"].map(o => el("option", { value: o, selected: o === u.intensity || false }, o)))
+      )
+    ),
+    el("div", { class: "field" }, el("label", {}, "Plan length"),
+      el("select", { onchange: e => { state.planWeeks = +e.target.value; saveState(state); render_app(); } },
+        ...[6, 8, 12, 16, 24].map(n => el("option", { value: n, selected: n === state.planWeeks || false }, n + " weeks")))
+    ),
+    el("div", { class: "field" }, el("label", {}, "Goal"),
+      el("select", { onchange: e => { u.goal = e.target.value; saveState(state); } },
+        ...["Race fitness","Trail-ready endurance","Get faster on local trails","Recover from injury","Just have fun"].map(o => el("option", { value: o, selected: o === u.goal || false }, o)))
+    ),
+    el("div", { class: "field" }, el("label", {}, "Race / target date"), el("input", { type: "date", value: u.raceDate || "", oninput: e => { u.raceDate = e.target.value; saveState(state); } })),
+  ));
+
+  // AI provider
+  root.appendChild(el("div", { class: "card", style: "margin-bottom:14px;" },
+    el("h2", {}, "Coach AI"),
+    el("p", { class: "muted small" }, "Out of the box, the Coach tab uses a local rule-based coach. To get real LLM responses, paste an Anthropic API key. The key stays on this device."),
+    el("hr"),
+    el("div", { class: "field" }, el("label", {}, "Provider"),
+      el("select", { onchange: e => { state.aiProvider = e.target.value; saveState(state); render_app(); } },
+        el("option", { value: "local", selected: state.aiProvider === "local" || false }, "Local rule-based coach (default)"),
+        el("option", { value: "anthropic", selected: state.aiProvider === "anthropic" || false }, "Anthropic Claude API"))
+    ),
+    state.aiProvider === "anthropic"
+      ? el("div", { class: "field" },
+          el("label", {}, "Anthropic API key"),
+          el("input", { type: "password", placeholder: "sk-ant-…", value: state.aiApiKey, oninput: e => { state.aiApiKey = e.target.value; saveState(state); } }),
+          el("p", { class: "muted small", style: "margin-top:6px;" }, "⚠ For personal use only. In a production app, calls would route through your own backend.")
+        )
+      : null
+  ));
+
+  root.appendChild(el("div", { class: "card" },
+    el("h2", {}, "Data"),
+    el("hr"),
+    el("p", { class: "muted small" }, "Your plan started on " + state.startedAt + ". Reset to start a fresh 12 weeks."),
+    el("div", { class: "row" },
+      el("button", { class: "btn ghost sm", onclick: () => {
+        state.startedAt = new Date().toISOString().slice(0,10);
+        state.completed = {};
+        saveState(state);
+        render_app();
+      } }, "Restart plan from today"),
+      el("button", { class: "btn danger sm", onclick: () => {
+        if (confirm("Wipe everything and log out?")) {
+          localStorage.removeItem(STORE_KEY);
+          state = null;
+          renderAuth();
+        }
+      } }, "Wipe all data")
+    )
+  ));
+}
+
+/* ------------------------ BOOT ------------------------ */
+
+if (state && state.user) {
+  render_app();
+} else {
+  renderAuth();
+}
+</script>
+</body>
+</html>
