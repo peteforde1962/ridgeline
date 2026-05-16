@@ -65,8 +65,10 @@ export default async function DashboardPage() {
             : "No check-in today — log one to tune your training intensity."}
         </p>
         <div className="flex flex-wrap gap-3">
-          <a href="/checkin" className="btn-primary">💚 Body check-in</a>
-          <a href="/profile" className="btn-ghost">⚙️ Profile & plan</a>
+          <a href="/today" className="btn-primary">🎯 Today's workout</a>
+          <a href="/plan" className="btn-ghost">📅 Full plan</a>
+          <a href="/checkin" className="btn-ghost">💚 Body check-in</a>
+          <a href="/profile" className="btn-ghost">⚙️ Profile</a>
         </div>
       </section>
 
