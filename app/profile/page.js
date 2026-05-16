@@ -1,10 +1,12 @@
-// /profile — edit rider profile and plan settings.
+// /profile — edit rider profile, plan settings, integrations (Strava).
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ProfileForm from "@/components/ProfileForm";
+import StravaCard from "@/components/StravaCard";
+import PageHeader from "@/components/PageHeader";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({ searchParams }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -15,28 +17,27 @@ export default async function ProfilePage() {
     .eq("id", user.id)
     .single();
 
+  const stravaStatus = searchParams?.strava || "";
+
   return (
     <main className="min-h-screen p-6 max-w-3xl mx-auto">
-      <header className="flex items-center justify-between mb-6">
-        <a href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">
-          ← Dashboard
-        </a>
-        <div className="flex items-center gap-2">
-          <div className="logo-mark">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 19l5-9 3 5 4-7 6 11z" />
-            </svg>
-          </div>
-          <div className="font-extrabold text-sm">RidgeLine</div>
-        </div>
-      </header>
+      <PageHeader />
 
       <h1 className="text-3xl font-extrabold mb-1">Profile</h1>
       <p className="text-[var(--muted)] mb-6">
         Tune your plan to your reality. Changes save instantly.
       </p>
 
-      <ProfileForm userId={user.id} profile={profile} />
+      <div className="space-y-4">
+        <ProfileForm userId={user.id} profile={profile} />
+
+        <StravaCard
+          connected={!!profile?.strava_refresh_token}
+          athleteId={profile?.strava_athlete_id}
+          lastSyncAt={profile?.strava_last_sync_at}
+          strava={stravaStatus}
+        />
+      </div>
     </main>
   );
 }
