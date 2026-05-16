@@ -24,7 +24,7 @@ export default async function RunPage() {
         <div className="space-y-2">
           {RUN_SESSIONS.map((s) => (
             <div key={s.name} className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "var(--panel2,#1d2a23)", border: "1px solid var(--line)" }}>
-              <span className="text-xs px-2 py-1 rounded bg-amber-400/15 text-amber-300 border border-amber-400/40 flex-shrink-0">Run</span>
+              <span className="text-xs px-2 py-1 rounded bg-[#a37650]/25 text-[#e3c094] border border-[#a37650]/60 flex-shrink-0">Run</span>
               <div className="flex-1">
                 <div className="font-semibold">{s.name} — <span className="text-[var(--muted)] font-normal">{s.time}</span></div>
                 <div className="text-sm text-[var(--muted)]">{s.note}</div>

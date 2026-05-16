@@ -84,7 +84,7 @@ export default function AddTrailForm({ userId }) {
         </div>
       </div>
 
-      {error && <p className="text-[#e87262] text-sm mb-3">⚠ {error}</p>}
+      {error && <p className="text-[var(--red)] text-sm mb-3">⚠ {error}</p>}
 
       <div className="flex gap-2">
         <button type="submit" disabled={busy} className="btn-primary text-sm">

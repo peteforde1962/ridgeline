@@ -158,8 +158,8 @@ export default function ProfileForm({ userId, profile }) {
         />
       </div>
 
-      {error && <p className="text-[#e87262] text-sm mb-3">⚠ {error}</p>}
-      {success && <p className="text-[#6cc28a] text-sm mb-3">✓ {success}</p>}
+      {error && <p className="text-[var(--red)] text-sm mb-3">⚠ {error}</p>}
+      {success && <p className="text-[var(--green)] text-sm mb-3">✓ {success}</p>}
 
       <button type="submit" disabled={saving} className="btn-primary">
         {saving ? "Saving…" : "Save profile"}

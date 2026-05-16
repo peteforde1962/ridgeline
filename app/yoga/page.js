@@ -43,7 +43,7 @@ export default async function YogaPage() {
         <section className="card">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold">Pre-Ride Warm-up</h2>
-            <span className="text-xs px-2 py-1 rounded bg-green-400/15 text-green-300 border border-green-400/40">Dynamic</span>
+            <span className="text-xs px-2 py-1 rounded bg-[#4e6851]/30 text-[#dcc9a9] border border-[#4e6851]/70">Dynamic</span>
           </div>
           <PoseList poses={YOGA_WARMUP} />
         </section>
@@ -51,7 +51,7 @@ export default async function YogaPage() {
         <section className="card">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold">Post-Ride Recovery</h2>
-            <span className="text-xs px-2 py-1 rounded bg-green-400/15 text-green-300 border border-green-400/40">Restorative</span>
+            <span className="text-xs px-2 py-1 rounded bg-[#4e6851]/30 text-[#dcc9a9] border border-[#4e6851]/70">Restorative</span>
           </div>
           <PoseList poses={YOGA_RECOVERY} />
         </section>

@@ -115,8 +115,8 @@ export default function LogRideForm({ userId, trails }) {
         <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className="input" placeholder="Felt strong on the climbs, washed out on Loose Larry…" />
       </div>
 
-      {error && <p className="text-[#e87262] text-sm mb-3">⚠ {error}</p>}
-      {success && <p className="text-[#6cc28a] text-sm mb-3">✓ {success}</p>}
+      {error && <p className="text-[var(--red)] text-sm mb-3">⚠ {error}</p>}
+      {success && <p className="text-[var(--green)] text-sm mb-3">✓ {success}</p>}
 
       <button type="submit" disabled={busy} className="btn-primary">
         {busy ? "Saving…" : "Save ride"}

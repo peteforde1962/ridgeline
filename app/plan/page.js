@@ -90,7 +90,7 @@ export default async function PlanPage() {
                   Week {w.week} <span className="text-[var(--muted)] font-normal">— {w.phaseName}</span>
                 </div>
                 {isCurrent && (
-                  <span className="text-xs font-bold px-2 py-1 rounded bg-orange-400/15 text-orange-300 border border-orange-400/40">
+                  <span className="text-xs font-bold px-2 py-1 rounded bg-[#b83a2d]/20 text-[#dcc9a9] border border-[#b83a2d]/60">
                     Current
                   </span>
                 )}

@@ -57,9 +57,9 @@ export default async function TodayPage() {
           className="card mb-5 text-sm"
           style={{
             borderColor:
-              readiness.level === "high" ? "rgba(108,194,138,.5)"
-              : readiness.level === "low" ? "rgba(232,114,98,.5)"
-              : "rgba(255,122,41,.4)",
+              readiness.level === "high" ? "rgba(106,138,109,.6)"
+              : readiness.level === "low" ? "rgba(215,106,74,.6)"
+              : "rgba(184,58,45,.5)",
           }}
         >
           <strong>Check-in: </strong>

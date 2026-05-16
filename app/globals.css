@@ -2,72 +2,155 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  RidgeLine palette — warm trail / dusk:
+    #DCC9A9  cream (text, warm highlights)
+    #B83A2D  brick red (primary accent)
+    #4E6851  forest green (structural, borders, secondary)
+*/
+
 :root {
-  --bg: #0e1410;
-  --bg2: #131c17;
-  --panel: #17221c;
-  --panel2: #1d2a23;
-  --line: #25372d;
-  --text: #e8f0ea;
-  --muted: #9fb1a5;
-  --accent: #ff7a29;
+  --bg:      #1a221b;   /* deep forest, slightly warm */
+  --bg2:     #232c24;   /* card-section background */
+  --panel:   #2c3a2f;   /* card surface */
+  --panel2:  #38483a;   /* card surface, raised */
+  --line:    #4e6851;   /* forest green — primary border */
+  --text:    #dcc9a9;   /* cream */
+  --muted:   #a99e7f;   /* muted cream */
+
+  --accent:  #b83a2d;   /* brick red — primary action */
+  --accent2: #d35a40;   /* lighter brick for hover */
+  --accent3: #dcc9a9;   /* cream as warm accent */
+
+  --green:   #6a8a6d;   /* slightly lighter forest, for success */
+  --red:     #d76a4a;   /* warm error red */
+  --blue:    #7a9eaa;   /* warm dusty blue for variety */
 }
 
 html, body {
   height: 100%;
-  background: radial-gradient(1200px 600px at 70% -10%, #1a2a21 0%, var(--bg) 60%) fixed;
+  background:
+    radial-gradient(1400px 700px at 70% -10%, #2a3d2c 0%, var(--bg) 60%) fixed;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* small utilities for the brand */
+/* Brand mark */
 .logo-mark {
   width: 32px; height: 32px; border-radius: 9px;
-  background: linear-gradient(135deg, var(--accent), #c54f10);
+  background: linear-gradient(135deg, var(--accent), #7a2418);
   display: grid; place-items: center;
-  box-shadow: 0 4px 18px rgba(255,122,41,.4);
+  box-shadow: 0 4px 18px rgba(184, 58, 45, 0.4);
 }
+
+/* Form controls */
 .field-label {
   font-size: 12px; color: var(--muted);
   font-weight: 600; margin-bottom: 6px; display: block;
+  text-transform: uppercase; letter-spacing: 0.4px;
 }
 .input {
   width: 100%;
-  background: #0c130f;
+  background: rgba(0, 0, 0, 0.25);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 14px;
+  padding: 12px 14px;     /* bigger tap targets */
+  font-size: 16px;        /* prevents iOS auto-zoom */
+  min-height: 44px;       /* iOS Human Interface tap-target floor */
 }
 .input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Buttons */
 .btn-primary {
   background: var(--accent);
-  color: #1a0a00;
+  color: #fff5e0;
   border: 0;
-  padding: 10px 16px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+.btn-primary:hover  { background: var(--accent2); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-ghost {
+  background: rgba(220, 201, 169, 0.05);
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: 12px 20px;
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
   font-size: 14px;
   display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px;
 }
-.btn-primary:hover { background: #ff8b41; }
-.btn-ghost {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--line);
-  padding: 10px 16px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 14px;
-}
-.btn-ghost:hover { background: var(--panel2); }
+.btn-ghost:hover { background: rgba(220, 201, 169, 0.10); }
+
+/* Cards */
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 18px;
+}
+
+/* Range sliders: warmer thumbs */
+input[type="range"] {
+  accent-color: var(--accent);
+  height: 24px;
+}
+
+/* Tables — make scroll smooth on mobile */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px 8px; }
+
+/* Mobile-specific tweaks */
+@media (max-width: 640px) {
+  .card { padding: 14px; border-radius: 12px; }
+  /* leave room for the bottom tab bar */
+  main { padding-bottom: 92px !important; }
+  h1 { font-size: 1.7rem !important; line-height: 1.2; }
+  h2 { font-size: 1.1rem !important; }
+  .btn-primary, .btn-ghost { padding: 10px 14px; font-size: 13px; }
+}
+
+/* Bottom tab bar */
+.tabbar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  display: none;
+  z-index: 50;
+  background: rgba(28, 36, 30, 0.97);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+.tabbar a {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 8px;
+  text-align: center;
+}
+.tabbar a.active {
+  color: var(--accent3);
+  background: rgba(184, 58, 45, 0.15);
+}
+.tabbar a .ico { font-size: 18px; line-height: 1; }
+@media (max-width: 768px) {
+  .tabbar { display: grid; }
 }

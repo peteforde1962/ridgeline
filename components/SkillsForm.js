@@ -91,7 +91,7 @@ export default function SkillsForm({ userId, ratings, focusSkills }) {
           <strong>{focus.length}</strong> / 4 focus skills selected
         </div>
         <div className="flex items-center gap-3">
-          {success && <span className="text-[#6cc28a] text-sm">✓ {success}</span>}
+          {success && <span className="text-[var(--green)] text-sm">✓ {success}</span>}
           <button onClick={handleSave} disabled={busy} className="btn-primary">
             {busy ? "Saving…" : "Save"}
           </button>

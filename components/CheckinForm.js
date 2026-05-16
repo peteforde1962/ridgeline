@@ -101,20 +101,20 @@ export default function CheckinForm({ userId, todayCheckin }) {
       <div
         className="rounded-lg p-3 mb-5 text-sm border"
         style={{
-          background: signal.tone === "good"   ? "rgba(108,194,138,.12)"
-                    : signal.tone === "warn"   ? "rgba(232,114,98,.12)"
-                    :                            "rgba(255,122,41,.10)",
-          borderColor: signal.tone === "good"  ? "rgba(108,194,138,.5)"
-                     : signal.tone === "warn"  ? "rgba(232,114,98,.5)"
-                     :                           "rgba(255,122,41,.4)",
+          background: signal.tone === "good"   ? "rgba(78,104,81,.18)"
+                    : signal.tone === "warn"   ? "rgba(215,106,74,.18)"
+                    :                            "rgba(184,58,45,.15)",
+          borderColor: signal.tone === "good"  ? "rgba(78,104,81,.7)"
+                     : signal.tone === "warn"  ? "rgba(215,106,74,.7)"
+                     :                           "rgba(184,58,45,.55)",
         }}
       >
         <strong className="block mb-1">Readiness signal</strong>
         {signal.label}
       </div>
 
-      {error && <p className="text-[#e87262] text-sm mb-3">⚠ {error}</p>}
-      {success && <p className="text-[#6cc28a] text-sm mb-3">✓ {success}</p>}
+      {error && <p className="text-[var(--red)] text-sm mb-3">⚠ {error}</p>}
+      {success && <p className="text-[var(--green)] text-sm mb-3">✓ {success}</p>}
 
       <button type="submit" disabled={saving} className="btn-primary">
         {saving ? "Saving…" : todayCheckin ? "Update today's check-in" : "Save check-in"}
