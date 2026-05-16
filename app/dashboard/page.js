@@ -68,6 +68,8 @@ export default async function DashboardPage() {
           <a href="/today" className="btn-primary">🎯 Today's workout</a>
           <a href="/plan" className="btn-ghost">📅 Full plan</a>
           <a href="/checkin" className="btn-ghost">💚 Body check-in</a>
+          <a href="/trails" className="btn-ghost">🚵 Trails & rides</a>
+          <a href="/coach" className="btn-ghost">🤖 Coach AI</a>
           <a href="/profile" className="btn-ghost">⚙️ Profile</a>
         </div>
       </section>
