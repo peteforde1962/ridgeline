@@ -66,11 +66,8 @@ export default async function DashboardPage() {
         </p>
         <div className="flex flex-wrap gap-3">
           <a href="/today" className="btn-primary">🎯 Today's workout</a>
-          <a href="/plan" className="btn-ghost">📅 Full plan</a>
           <a href="/checkin" className="btn-ghost">💚 Body check-in</a>
-          <a href="/trails" className="btn-ghost">🚵 Trails & rides</a>
           <a href="/coach" className="btn-ghost">🤖 Coach AI</a>
-          <a href="/profile" className="btn-ghost">⚙️ Profile</a>
         </div>
       </section>
 
@@ -122,19 +119,24 @@ export default async function DashboardPage() {
         </section>
       )}
 
+      <section className="card mb-6">
+        <h2 className="text-lg font-bold mb-3">Training plan</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <a href="/plan"     className="btn-ghost justify-center text-sm">📅 Full plan</a>
+          <a href="/trails"   className="btn-ghost justify-center text-sm">🚵 Trails & rides</a>
+          <a href="/skills"   className="btn-ghost justify-center text-sm">📊 Skills profile</a>
+          <a href="/profile"  className="btn-ghost justify-center text-sm">⚙️ Profile</a>
+        </div>
+      </section>
+
       <section className="card">
-        <h2 className="text-lg font-bold mb-2">What's next</h2>
-        <ol className="list-decimal list-inside space-y-2 text-[var(--muted)] text-sm">
-          <li>
-            <span className="text-[var(--text)]">Set up your profile</span> — pick your preset, hours, and goal.
-          </li>
-          <li>
-            <span className="text-[var(--text)]">Check in daily</span> — even 10 seconds of feedback shapes your training.
-          </li>
-          <li>
-            <span className="text-[var(--text)]">Coming next:</span> Today's workout, full Plan, Trails & Rides, Coach AI.
-          </li>
-        </ol>
+        <h2 className="text-lg font-bold mb-3">Workout libraries</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <a href="/strength" className="btn-ghost justify-center text-sm">🏋️ Strength</a>
+          <a href="/yoga"     className="btn-ghost justify-center text-sm">🧘 Yoga & Mobility</a>
+          <a href="/run"      className="btn-ghost justify-center text-sm">🏃 Running</a>
+          <a href="/rope"     className="btn-ghost justify-center text-sm">🪢 Flow Rope</a>
+        </div>
       </section>
     </main>
   );

@@ -79,7 +79,7 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
         <p className="text-sm text-[var(--muted)] mb-3">{session.notes}</p>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         {["easier", "standard", "harder"].map((opt) => (
           <button
             key={opt}
@@ -99,7 +99,26 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
         >
           {isSkipped ? "Un-skip" : "Skip"}
         </button>
+        {detailsLink(session.type) && (
+          <a
+            href={detailsLink(session.type)}
+            className="btn-ghost text-xs ml-auto"
+            style={{ padding: "5px 10px" }}
+          >
+            Open details →
+          </a>
+        )}
       </div>
     </div>
   );
+}
+
+function detailsLink(type) {
+  return ({
+    strength: "/strength",
+    yoga: "/yoga",
+    run: "/run",
+    rope: "/rope",
+    ride: "/trails",
+  })[type] || null;
 }
