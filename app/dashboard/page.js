@@ -125,17 +125,24 @@ export default async function DashboardPage() {
           <a href="/plan"     className="btn-ghost justify-center text-sm">📅 Full plan</a>
           <a href="/trails"   className="btn-ghost justify-center text-sm">🚵 Trails & rides</a>
           <a href="/skills"   className="btn-ghost justify-center text-sm">📊 Skills profile</a>
-          <a href="/profile"  className="btn-ghost justify-center text-sm">⚙️ Profile</a>
+          <a href="/videos"   className="btn-ghost justify-center text-sm">🎥 Videos</a>
         </div>
       </section>
 
-      <section className="card">
+      <section className="card mb-6">
         <h2 className="text-lg font-bold mb-3">Workout libraries</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <a href="/strength" className="btn-ghost justify-center text-sm">🏋️ Strength</a>
           <a href="/yoga"     className="btn-ghost justify-center text-sm">🧘 Yoga & Mobility</a>
           <a href="/run"      className="btn-ghost justify-center text-sm">🏃 Running</a>
           <a href="/rope"     className="btn-ghost justify-center text-sm">🪢 Flow Rope</a>
+        </div>
+      </section>
+
+      <section className="card">
+        <h2 className="text-lg font-bold mb-3">Account</h2>
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-2">
+          <a href="/profile" className="btn-ghost justify-center text-sm">⚙️ Profile</a>
         </div>
       </section>
     </main>
