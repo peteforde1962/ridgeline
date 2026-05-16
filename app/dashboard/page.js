@@ -38,9 +38,12 @@ export default async function DashboardPage() {
         <h1 className="text-3xl font-extrabold mb-1">
           Hey, {displayName} 👋
         </h1>
-        <p className="text-[var(--muted)]">
-          You're signed in. This data came from the database. That's the moment your prototype became real.
+        <p className="text-[var(--muted)] mb-4">
+          You're signed in. This data came from the database.
         </p>
+        <div className="flex flex-wrap gap-3">
+          <a href="/checkin" className="btn-primary">💚 Body check-in</a>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
