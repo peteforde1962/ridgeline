@@ -1,5 +1,5 @@
 // Server-rendered dashboard.
-// Loads the current user + profile from Supabase, then renders the page.
+// Loads user + profile + today's check-in, then renders.
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -11,14 +11,35 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Fetch this user's profile row (auto-created on signup by the SQL trigger).
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
 
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: todayCheckin } = await supabase
+    .from("check_ins")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("date", today)
+    .maybeSingle();
+
   const displayName = profile?.name || user.email?.split("@")[0] || "rider";
+  // "Profile not set up" heuristic: name is still the email prefix, AND no goal change yet.
+  const needsSetup =
+    !profile ||
+    (profile.name === user.email?.split("@")[0] && profile.preset === "Sport" && profile.weekly_hours === 6);
+
+  let readiness = null;
+  let readinessLabel = null;
+  if (todayCheckin) {
+    readiness = todayCheckin.sleep + todayCheckin.energy - todayCheckin.soreness;
+    readinessLabel =
+      readiness <= 3 ? "Low — go Easier"   :
+      readiness >= 8 ? "High — push Harder" :
+                       "Standard day";
+  }
 
   return (
     <main className="min-h-screen p-6 max-w-5xl mx-auto">
@@ -39,12 +60,25 @@ export default async function DashboardPage() {
           Hey, {displayName} 👋
         </h1>
         <p className="text-[var(--muted)] mb-4">
-          You're signed in. This data came from the database.
+          {todayCheckin
+            ? `You checked in today: ${readinessLabel}.`
+            : "No check-in today — log one to tune your training intensity."}
         </p>
         <div className="flex flex-wrap gap-3">
           <a href="/checkin" className="btn-primary">💚 Body check-in</a>
+          <a href="/profile" className="btn-ghost">⚙️ Profile & plan</a>
         </div>
       </section>
+
+      {needsSetup && (
+        <section className="card mb-6" style={{ borderColor: "var(--accent)" }}>
+          <h2 className="text-lg font-bold mb-1">👋 Finish setting up your plan</h2>
+          <p className="text-sm text-[var(--muted)] mb-3">
+            Tell us about your riding so we can tailor the workouts. Takes 60 seconds.
+          </p>
+          <a href="/profile" className="btn-primary">Set up my profile</a>
+        </section>
+      )}
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="card">
@@ -61,21 +95,40 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      {todayCheckin && (
+        <section className="card mb-6">
+          <h2 className="text-lg font-bold mb-2">Today's check-in</h2>
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Sleep</div>
+              <div className="text-2xl font-extrabold">{todayCheckin.sleep}<span className="text-sm text-[var(--muted)]">/10</span></div>
+            </div>
+            <div>
+              <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Soreness</div>
+              <div className="text-2xl font-extrabold">{todayCheckin.soreness}<span className="text-sm text-[var(--muted)]">/10</span></div>
+            </div>
+            <div>
+              <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Energy</div>
+              <div className="text-2xl font-extrabold">{todayCheckin.energy}<span className="text-sm text-[var(--muted)]">/10</span></div>
+            </div>
+          </div>
+          {todayCheckin.notes && (
+            <p className="text-sm text-[var(--muted)] mt-3 italic">"{todayCheckin.notes}"</p>
+          )}
+        </section>
+      )}
+
       <section className="card">
         <h2 className="text-lg font-bold mb-2">What's next</h2>
         <ol className="list-decimal list-inside space-y-2 text-[var(--muted)] text-sm">
           <li>
-            <span className="text-[var(--text)]">Test it on your phone.</span> Open this URL on your phone and log in
-            with the same account. You should see the same data — that's the real test of "it's real now."
+            <span className="text-[var(--text)]">Set up your profile</span> — pick your preset, hours, and goal.
           </li>
           <li>
-            <span className="text-[var(--text)]">Port the prototype features.</span> Next we move
-            <code className="mx-1 text-[var(--accent2,#f4b860)]">Today</code> /
-            <code className="mx-1 text-[var(--accent2,#f4b860)]">Plan</code> /
-            <code className="mx-1 text-[var(--accent2,#f4b860)]">Check-in</code> / etc. one screen at a time.
+            <span className="text-[var(--text)]">Check in daily</span> — even 10 seconds of feedback shapes your training.
           </li>
           <li>
-            <span className="text-[var(--text)]">Deploy to Vercel.</span> See the README — about 10 minutes.
+            <span className="text-[var(--text)]">Coming next:</span> Today's workout, full Plan, Trails & Rides, Coach AI.
           </li>
         </ol>
       </section>
