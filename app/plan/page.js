@@ -97,7 +97,12 @@ export default async function PlanPage() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
                 {w.days.map((d, di) => (
-                  <div key={di} className="rounded-lg p-2 border border-[var(--line)]" style={{ background: "var(--panel2,#1d2a23)" }}>
+                  <a
+                    key={di}
+                    href={`/plan/${i}/${di}`}
+                    className="rounded-lg p-2 border border-[var(--line)] block transition hover:border-[var(--accent)] hover:bg-[#3a4838]"
+                    style={{ background: "var(--panel2)" }}
+                  >
                     <div className="text-[10px] uppercase tracking-wider text-[var(--muted)] mb-1">{d.day}</div>
                     <div className="flex flex-col gap-1">
                       {d.details.length === 0 ? (
@@ -118,7 +123,7 @@ export default async function PlanPage() {
                         })
                       )}
                     </div>
-                  </div>
+                  </a>
                 ))}
               </div>
             </div>
