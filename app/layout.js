@@ -1,5 +1,6 @@
 import "./globals.css";
 import MobileTabBar from "@/components/MobileTabBar";
+import Sidebar from "@/components/Sidebar";
 
 export const metadata = {
   title: "RidgeLine — MTB Training",
@@ -18,6 +19,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        <Sidebar />
         {children}
         <MobileTabBar />
       </body>

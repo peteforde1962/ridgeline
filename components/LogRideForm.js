@@ -13,7 +13,7 @@ export default function LogRideForm({ userId, trails }) {
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [trailId, setTrailId] = useState("");
-  const [miles, setMiles] = useState("");
+  const [km, setKm] = useState("");
   const [elev, setElev] = useState("");
   const [minutes, setMinutes] = useState("");
   const [feel, setFeel] = useState(3);
@@ -24,19 +24,18 @@ export default function LogRideForm({ userId, trails }) {
 
   function handleTrailPick(id) {
     setTrailId(id);
-    // Pre-fill miles + elevation from trail defaults if blank
     const t = trails.find((t) => t.id === id);
-    if (t && !miles) setMiles(t.length_mi ?? "");
-    if (t && !elev)  setElev(t.elev_ft ?? "");
+    if (t && !km)   setKm(t.length_km ?? "");
+    if (t && !elev) setElev(t.elev_m ?? "");
   }
 
   async function handleSave(e) {
     e.preventDefault();
     setBusy(true); setError(""); setSuccess("");
 
-    if (!miles || !minutes) {
+    if (!km || !minutes) {
       setBusy(false);
-      setError("Add miles and time.");
+      setError("Add distance (km) and time.");
       return;
     }
 
@@ -44,16 +43,16 @@ export default function LogRideForm({ userId, trails }) {
       user_id: userId,
       trail_id: trailId || null,
       date,
-      miles: +miles,
-      elev_ft: elev ? +elev : null,
+      km: +km,
+      elev_m: elev ? +elev : null,
       minutes: +minutes,
       feel,
       notes: notes || null,
+      source: "manual",
     });
 
     if (rideError) { setBusy(false); setError(rideError.message); return; }
 
-    // If tied to a trail, update PR + last_ride.
     if (trailId) {
       const t = trails.find((x) => x.id === trailId);
       const newMin = +minutes;
@@ -65,8 +64,7 @@ export default function LogRideForm({ userId, trails }) {
 
     setBusy(false);
     setSuccess("Ride logged.");
-    // Reset for next ride
-    setMiles(""); setElev(""); setMinutes(""); setNotes(""); setFeel(3);
+    setKm(""); setElev(""); setMinutes(""); setNotes(""); setFeel(3);
     router.refresh();
   }
 
@@ -90,11 +88,11 @@ export default function LogRideForm({ userId, trails }) {
 
       <div className="grid grid-cols-3 gap-3 mb-3">
         <div>
-          <label className="field-label">Miles</label>
-          <input type="number" step="0.1" value={miles} onChange={(e) => setMiles(e.target.value)} required className="input" />
+          <label className="field-label">Distance (km)</label>
+          <input type="number" step="0.1" value={km} onChange={(e) => setKm(e.target.value)} required className="input" />
         </div>
         <div>
-          <label className="field-label">Elev (ft)</label>
+          <label className="field-label">Elev (m)</label>
           <input type="number" value={elev} onChange={(e) => setElev(e.target.value)} className="input" />
         </div>
         <div>

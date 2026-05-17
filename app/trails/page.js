@@ -19,9 +19,9 @@ export default async function TrailsPage() {
     .from("rides").select("*, trails(name)").eq("user_id", user.id)
     .order("date", { ascending: false }).limit(25);
 
-  // Aggregate stats
-  const totalMiles = (rides || []).reduce((a, r) => a + (+r.miles || 0), 0);
-  const totalElev  = (rides || []).reduce((a, r) => a + (+r.elev_ft || 0), 0);
+  // Aggregate stats (metric)
+  const totalKm    = (rides || []).reduce((a, r) => a + (+r.km || 0), 0);
+  const totalElev  = (rides || []).reduce((a, r) => a + (+r.elev_m || 0), 0);
   const totalMin   = (rides || []).reduce((a, r) => a + (+r.minutes || 0), 0);
 
   return (
@@ -38,18 +38,21 @@ export default async function TrailsPage() {
         </div>
       </header>
 
-      <h1 className="text-3xl font-extrabold mb-1">Trails & Rides</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
+        <h1 className="text-3xl font-extrabold">Trails & Rides</h1>
+        <a href="/trails/discover" className="btn-ghost text-sm">🌍 Discover trails</a>
+      </div>
       <p className="text-[var(--muted)] mb-6">Log rides, track trail PRs, see where your saddle time goes.</p>
 
       {/* Stats cards */}
       <section className="grid grid-cols-3 gap-3 mb-6">
         <div className="card">
           <div className="text-xs uppercase tracking-wide text-[var(--muted)] mb-1">Total distance</div>
-          <div className="text-2xl font-extrabold">{totalMiles.toFixed(1)} <span className="text-sm text-[var(--muted)]">mi</span></div>
+          <div className="text-2xl font-extrabold">{totalKm.toFixed(1)} <span className="text-sm text-[var(--muted)]">km</span></div>
         </div>
         <div className="card">
           <div className="text-xs uppercase tracking-wide text-[var(--muted)] mb-1">Total elevation</div>
-          <div className="text-2xl font-extrabold">{totalElev.toLocaleString()} <span className="text-sm text-[var(--muted)]">ft</span></div>
+          <div className="text-2xl font-extrabold">{totalElev.toLocaleString()} <span className="text-sm text-[var(--muted)]">m</span></div>
         </div>
         <div className="card">
           <div className="text-xs uppercase tracking-wide text-[var(--muted)] mb-1">Saddle time</div>
@@ -88,8 +91,8 @@ export default async function TrailsPage() {
                 {trails.map((t) => (
                   <tr key={t.id} className="border-t border-[var(--line)]">
                     <td className="p-2 font-semibold">{t.name}</td>
-                    <td className="p-2">{t.length_mi ? `${t.length_mi} mi` : "—"}</td>
-                    <td className="p-2">{t.elev_ft ? `${t.elev_ft} ft` : "—"}</td>
+                    <td className="p-2">{t.length_km ? `${t.length_km} km` : "—"}</td>
+                    <td className="p-2">{t.elev_m ? `${t.elev_m} m` : "—"}</td>
                     <td className="p-2"><span className="text-xs px-2 py-0.5 rounded bg-[var(--panel2,#1d2a23)] border border-[var(--line)]">{t.difficulty}</span></td>
                     <td className="p-2">{t.pr_minutes ? `${t.pr_minutes} min` : <span className="text-[var(--muted)]">—</span>}</td>
                     <td className="p-2 text-[var(--muted)]">{t.last_ride || "—"}</td>
@@ -132,8 +135,8 @@ export default async function TrailsPage() {
                   <tr key={r.id} className="border-t border-[var(--line)]">
                     <td className="p-2 whitespace-nowrap">{r.date}</td>
                     <td className="p-2">{r.trails?.name || <span className="text-[var(--muted)]">—</span>}</td>
-                    <td className="p-2">{r.miles} mi</td>
-                    <td className="p-2">{r.elev_ft ? `${r.elev_ft} ft` : "—"}</td>
+                    <td className="p-2">{r.km ? `${r.km} km` : "—"}</td>
+                    <td className="p-2">{r.elev_m ? `${r.elev_m} m` : "—"}</td>
                     <td className="p-2">{r.minutes} min</td>
                     <td className="p-2">{"⭐".repeat(r.feel || 0)}</td>
                     <td className="p-2 text-[var(--muted)] max-w-xs truncate">{r.notes || ""}</td>

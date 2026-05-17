@@ -44,15 +44,17 @@ export default async function DashboardPage() {
   return (
     <main className="min-h-screen p-6 max-w-5xl mx-auto">
       <header className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
+        <a href="/dashboard" className="flex items-center gap-3 hover:opacity-80 md:hidden">
           <div className="logo-mark">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 19l5-9 3 5 4-7 6 11z" />
             </svg>
           </div>
           <div className="font-extrabold text-xl">RidgeLine</div>
+        </a>
+        <div className="ml-auto">
+          <SignOutButton />
         </div>
-        <SignOutButton />
       </header>
 
       <section className="card mb-6">
@@ -129,20 +131,13 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="card mb-6">
+      <section className="card">
         <h2 className="text-lg font-bold mb-3">Workout libraries</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <a href="/strength" className="btn-ghost justify-center text-sm">🏋️ Strength</a>
           <a href="/yoga"     className="btn-ghost justify-center text-sm">🧘 Yoga & Mobility</a>
           <a href="/run"      className="btn-ghost justify-center text-sm">🏃 Running</a>
           <a href="/rope"     className="btn-ghost justify-center text-sm">🪢 Flow Rope</a>
-        </div>
-      </section>
-
-      <section className="card">
-        <h2 className="text-lg font-bold mb-3">Account</h2>
-        <div className="grid grid-cols-2 md:grid-cols-2 gap-2">
-          <a href="/profile" className="btn-ghost justify-center text-sm">⚙️ Profile</a>
         </div>
       </section>
     </main>

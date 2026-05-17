@@ -93,7 +93,7 @@ export async function POST(request) {
       "",
       "── RECENT RIDES (last 10) ──",
       ...(recentRides || []).map(r =>
-        `${r.date}: ${r.miles}mi · ${r.elev_ft || "?"}ft · ${r.minutes}min · feel ${r.feel || "?"}/5${r.trails?.name ? ` on ${r.trails.name}` : ""}${r.notes ? ` — ${r.notes}` : ""}`
+        `${r.date}: ${r.km ?? "?"}km · ${r.elev_m ?? "?"}m · ${r.minutes}min · feel ${r.feel || "?"}/5${r.trails?.name ? ` on ${r.trails.name}` : ""}${r.notes ? ` — ${r.notes}` : ""}`
       ),
       (recentRides || []).length === 0 ? "(none)" : "",
       "",

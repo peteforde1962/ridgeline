@@ -25,8 +25,8 @@ export default function AddTrailForm({ userId }) {
     const { error } = await supabase.from("trails").insert({
       user_id: userId,
       name,
-      length_mi: length ? +length : null,
-      elev_ft: elev ? +elev : null,
+      length_km: length ? +length : null,
+      elev_m: elev ? +elev : null,
       difficulty,
       region,
     });
@@ -47,7 +47,7 @@ export default function AddTrailForm({ userId }) {
   }
 
   return (
-    <form onSubmit={handleSave} className="card mt-3" style={{ background: "var(--panel2,#1d2a23)" }}>
+    <form onSubmit={handleSave} className="card mt-3" style={{ background: "var(--panel2)" }}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-bold">Add a trail</h3>
         <button type="button" onClick={() => setOpen(false)} className="text-[var(--muted)] hover:text-white">✕</button>
@@ -60,11 +60,11 @@ export default function AddTrailForm({ userId }) {
 
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
-          <label className="field-label">Length (mi)</label>
+          <label className="field-label">Length (km)</label>
           <input type="number" step="0.1" value={length} onChange={(e) => setLength(e.target.value)} className="input" />
         </div>
         <div>
-          <label className="field-label">Elevation (ft)</label>
+          <label className="field-label">Elevation (m)</label>
           <input type="number" value={elev} onChange={(e) => setElev(e.target.value)} className="input" />
         </div>
       </div>
