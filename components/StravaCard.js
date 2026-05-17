@@ -73,6 +73,8 @@ export default function StravaCard({ connected, athleteId, lastSyncAt, strava })
             <p className="text-sm text-[var(--green)] mt-3">
               ✓ Imported {result.inserted} new ride{result.inserted === 1 ? "" : "s"}.
               {result.skipped > 0 && ` (${result.skipped} already in your library)`}
+              {typeof result.matched === "number" && result.matched > 0 &&
+                ` · Auto-linked ${result.matched} to a saved trail.`}
               {" "}Looked at {result.fetched} Strava activit{result.fetched === 1 ? "y" : "ies"}.
             </p>
           )}

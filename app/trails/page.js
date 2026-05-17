@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import LogRideForm from "@/components/LogRideForm";
 import AddTrailForm from "@/components/AddTrailForm";
 import DeleteRow from "@/components/DeleteRow";
+import MatchTrailsButton from "@/components/MatchTrailsButton";
 
 export default async function TrailsPage() {
   const supabase = createClient();
@@ -105,7 +106,10 @@ export default async function TrailsPage() {
 
       {/* Recent rides */}
       <section className="card">
-        <h2 className="text-lg font-bold mb-3">Recent rides</h2>
+        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+          <h2 className="text-lg font-bold">Recent rides</h2>
+          <MatchTrailsButton />
+        </div>
         {!rides || rides.length === 0 ? (
           <p className="text-[var(--muted)] text-sm">No rides logged yet. Use the form above to log your first.</p>
         ) : (

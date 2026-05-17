@@ -3,6 +3,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { ensureFreshToken, fetchAthleteActivities, activityToRide } from "@/lib/strava";
+import { matchTrail } from "@/lib/trail-match";
 
 export async function POST(request) {
   try {
@@ -25,9 +26,21 @@ export async function POST(request) {
       : Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000);
 
     const activities = await fetchAthleteActivities(accessToken, { after: lastSync, perPage: 100 });
-    const rows = activities.map((a) => activityToRide(a, user.id)).filter(Boolean);
 
-    let inserted = 0, skipped = 0;
+    // Load user's trails once so we can auto-match each activity to a trail.
+    const { data: trails } = await supabase
+      .from("trails").select("id, name").eq("user_id", user.id);
+
+    const rows = activities.map((a) => {
+      const row = activityToRide(a, user.id);
+      if (!row) return null;
+      const matchedTrailId = matchTrail(a.name, trails || []);
+      if (matchedTrailId) row.trail_id = matchedTrailId;
+      return row;
+    }).filter(Boolean);
+
+    let inserted = 0, skipped = 0, matched = 0;
+    matched = rows.filter((r) => r.trail_id).length;
     if (rows.length > 0) {
       const { data: ins, error } = await supabase
         .from("rides")
@@ -48,6 +61,7 @@ export async function POST(request) {
       cyclingFiltered: rows.length,
       inserted,
       skipped,
+      matched,
     });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
