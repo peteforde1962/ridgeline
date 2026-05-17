@@ -6,6 +6,7 @@ import LogRideForm from "@/components/LogRideForm";
 import AddTrailForm from "@/components/AddTrailForm";
 import DeleteRow from "@/components/DeleteRow";
 import MatchTrailsButton from "@/components/MatchTrailsButton";
+import RideTrailPicker from "@/components/RideTrailPicker";
 
 export default async function TrailsPage() {
   const supabase = createClient();
@@ -134,7 +135,9 @@ export default async function TrailsPage() {
                 {rides.map((r) => (
                   <tr key={r.id} className="border-t border-[var(--line)]">
                     <td className="p-2 whitespace-nowrap">{r.date}</td>
-                    <td className="p-2">{r.trails?.name || <span className="text-[var(--muted)]">—</span>}</td>
+                    <td className="p-2">
+                      <RideTrailPicker rideId={r.id} currentTrailId={r.trail_id} trails={trails || []} />
+                    </td>
                     <td className="p-2">{r.km ? `${r.km} km` : "—"}</td>
                     <td className="p-2">{r.elev_m ? `${r.elev_m} m` : "—"}</td>
                     <td className="p-2">{r.minutes} min</td>
