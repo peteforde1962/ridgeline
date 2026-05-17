@@ -1,8 +1,8 @@
-// /trails/discover — browse popular cycling segments via the user's Strava account.
+// /trails/discover — global trail discovery via OpenStreetMap.
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { REGIONS } from "@/lib/segments";
+import { REGIONS } from "@/lib/osm-trails";
 import TrailDiscover from "@/components/TrailDiscover";
 import PageHeader from "@/components/PageHeader";
 
@@ -16,7 +16,7 @@ export default async function TrailDiscoverPage() {
       <PageHeader back="/trails" />
       <h1 className="text-3xl font-extrabold mb-1">Discover trails</h1>
       <p className="text-[var(--muted)] mb-6">
-        Browse popular cycling segments worldwide via Strava. Pick a region, find what you ride, click Add.
+        MTB trail data from OpenStreetMap — global, free, the same source Trailforks built on.
       </p>
 
       <TrailDiscover regions={REGIONS} />

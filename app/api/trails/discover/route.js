@@ -1,8 +1,12 @@
-// GET /api/trails/discover?region=squamish
-// Fetches top cycling segments near a region using the user's Strava OAuth.
+// GET /api/trails/discover?region=squamish&radiusKm=25
+// Fetches MTB trails from OpenStreetMap (free, no auth).
 
 import { createClient } from "@/lib/supabase/server";
-import { fetchSegmentsNear, getRegion, getStravaAccessToken } from "@/lib/segments";
+import { fetchOsmTrails, getRegion } from "@/lib/osm-trails";
+
+// Allow this route to run up to 60s (default is 10s on Vercel Hobby).
+// On Hobby tier the upper bound is 60s — anything beyond requires Pro.
+export const maxDuration = 60;
 
 export async function GET(request) {
   const supabase = createClient();
@@ -12,10 +16,12 @@ export async function GET(request) {
   const url = new URL(request.url);
   const regionId = url.searchParams.get("region");
   const region = regionId ? getRegion(regionId) : null;
+  const radiusKm = +url.searchParams.get("radiusKm") || 25;
 
-  let coords;
+  let coords, regionLabel = null;
   if (region) {
     coords = { lat: region.lat, lon: region.lon };
+    regionLabel = region.label;
   } else {
     const lat = url.searchParams.get("lat");
     const lon = url.searchParams.get("lon");
@@ -24,17 +30,9 @@ export async function GET(request) {
   }
 
   try {
-    const accessToken = await getStravaAccessToken(supabase, user.id);
-    const segments = await fetchSegmentsNear({
-      lat: coords.lat,
-      lon: coords.lon,
-      accessToken,
-    });
-    return Response.json({ segments, regionLabel: region?.label || null });
+    const trails = await fetchOsmTrails({ ...coords, radiusKm });
+    return Response.json({ trails, regionLabel });
   } catch (e) {
-    if (e.code === "strava-not-connected") {
-      return Response.json({ error: "strava-not-connected" }, { status: 403 });
-    }
     return Response.json({ error: e.message }, { status: 502 });
   }
 }
