@@ -4,6 +4,8 @@
 // Hidden on screens < 768px (mobile uses the bottom tab bar instead).
 
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 // Tiny SVG icon components. Stroke-only, flat, 1.75 stroke-width.
 function Icon({ path, viewBox = "0 0 24 24" }) {
@@ -51,12 +53,28 @@ const LIBRARIES = [
 
 const BOTTOM = [
   { href: "/profile",    label: "Profile",     ico: ICONS.cog },
+  { href: "/admin",      label: "Admin",       ico: ICONS.bars, adminOnly: true },
 ];
 
 const HIDDEN_ON = ["/", "/login", "/signup"];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Detect admin status to conditionally show the Admin link.
+  useEffect(() => {
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+        setIsAdmin(!!data?.is_admin);
+      } catch {}
+    })();
+  }, [pathname]);
+
   if (HIDDEN_ON.includes(pathname)) return null;
 
   const isActive = (href) => pathname === href || pathname?.startsWith(href + "/");
@@ -101,7 +119,7 @@ export default function Sidebar() {
       </div>
 
       <div className="flex flex-col gap-0.5 mt-auto">
-        {BOTTOM.map((item) => <Row key={item.href} item={item} />)}
+        {BOTTOM.filter((it) => !it.adminOnly || isAdmin).map((item) => <Row key={item.href} item={item} />)}
       </div>
     </aside>
   );
