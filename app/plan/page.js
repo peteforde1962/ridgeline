@@ -1,8 +1,11 @@
-// /plan — full N-week plan with interactive day cells + per-week progress bars.
+// /plan — full N-week plan with calendar dates, ✓/✗ icons, phase context.
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildPlan, currentWeekIndex, sessionLabel, sessionTagClass, PHASES } from "@/lib/plan";
+import {
+  buildPlan, currentWeekIndex, sessionLabel, sessionTagClass, PHASES,
+  dateForDay, formatShortDate,
+} from "@/lib/plan";
 import PlanDayCell from "@/components/PlanDayCell";
 import PageHeader from "@/components/PageHeader";
 
@@ -14,13 +17,12 @@ export default async function PlanPage() {
   const { data: profile } = await supabase
     .from("profiles").select("*").eq("id", user.id).single();
 
-  // Pull every plan_session row to compute progress + per-day store maps.
   const { data: allSessions } = await supabase
     .from("plan_sessions")
     .select("week_index,day_index,session_idx,completed,tweak")
     .eq("user_id", user.id);
 
-  const sessionsByDay = {}; // "w-d" -> { sessionIdx: row }
+  const sessionsByDay = {};
   for (const s of (allSessions || [])) {
     const key = `${s.week_index}-${s.day_index}`;
     sessionsByDay[key] = sessionsByDay[key] || {};
@@ -30,7 +32,12 @@ export default async function PlanPage() {
   const plan = buildPlan(profile);
   const wIdx = currentWeekIndex(profile?.started_at, plan.length);
 
-  // Per-week completion stats: completed / scheduled (excluding rest days).
+  // Compute phase allocation summary so the user can see what their plan length means.
+  const phaseSummary = PHASES.map((p) => ({
+    ...p,
+    actual: plan.filter((w) => w.phase === p.key).length,
+  })).filter((p) => p.actual > 0);
+
   function weekStats(weekI) {
     let scheduled = 0, done = 0;
     plan[weekI].days.forEach((d, di) => {
@@ -48,12 +55,13 @@ export default async function PlanPage() {
       <PageHeader />
       <h1 className="text-3xl font-extrabold mb-1">{plan.length}-Week Plan</h1>
       <p className="text-[var(--muted)] mb-5">
-        Tap a session tag to mark it done. Click anywhere else on a day to drill into details.
+        Tap a session tag to cycle: <span className="text-[var(--text)]">○ pending → ✓ done → ✗ skipped</span>.
+        Click anywhere else on a day to drill into details.
       </p>
 
-      {/* Phase strip */}
+      {/* Phase breakdown — explains exactly how the weeks are allocated */}
       <div className="grid grid-cols-5 gap-2 mb-6">
-        {PHASES.map((p) => {
+        {phaseSummary.map((p) => {
           const isCurrent = plan[wIdx]?.phase === p.key;
           return (
             <div
@@ -65,7 +73,7 @@ export default async function PlanPage() {
               }}
             >
               <div className="font-bold text-sm">{p.name}</div>
-              <div className="text-xs text-[var(--muted)] mt-1">{p.weeks} wk</div>
+              <div className="text-xs text-[var(--muted)] mt-1">{p.actual} wk{p.actual > 1 ? "s" : ""}</div>
             </div>
           );
         })}
@@ -85,6 +93,8 @@ export default async function PlanPage() {
         {plan.map((w, i) => {
           const isCurrent = i === wIdx;
           const stats = weekStats(i);
+          const weekStartDate = dateForDay(profile?.started_at, i, 0);
+          const weekEndDate   = dateForDay(profile?.started_at, i, 6);
           return (
             <div
               key={w.week}
@@ -95,8 +105,16 @@ export default async function PlanPage() {
               }}
             >
               <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
-                <div className="font-bold">
-                  Week {w.week} <span className="text-[var(--muted)] font-normal">— {w.phaseName}</span>
+                <div>
+                  <div className="font-bold">
+                    Week {w.week} of {plan.length}
+                    <span className="text-[var(--muted)] font-normal"> — {w.phaseName} ({w.phaseWeek}/{w.phaseTotalWeeks})</span>
+                  </div>
+                  {weekStartDate && (
+                    <div className="text-xs text-[var(--muted)]">
+                      {formatShortDate(weekStartDate)} – {formatShortDate(weekEndDate)}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[var(--muted)]">{stats.done}/{stats.scheduled} done</span>
@@ -130,6 +148,7 @@ export default async function PlanPage() {
                     dayIndex={di}
                     day={d}
                     storedMap={sessionsByDay[`${i}-${di}`]}
+                    dateLabel={formatShortDate(dateForDay(profile?.started_at, i, di))}
                   />
                 ))}
               </div>
