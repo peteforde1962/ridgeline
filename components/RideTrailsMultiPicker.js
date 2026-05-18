@@ -61,7 +61,7 @@ export default function RideTrailsMultiPicker({ rideId, linkedTrailIds = [], tra
             key={t.id}
             onClick={() => toggle(t.id)}
             disabled={busy}
-            className="text-xs px-2 py-0.5 rounded border border-[var(--accent)] bg-[#f8df70]/15 text-[var(--text)] hover:bg-[#f8df70]/30"
+            className="text-xs px-2 py-0.5 rounded border border-[var(--accent)] bg-[#f26838]/12 text-[var(--text)] hover:bg-[#f26838]/25"
             title="Click to remove"
           >
             {t.name} ✕

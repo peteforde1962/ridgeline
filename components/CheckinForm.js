@@ -103,10 +103,10 @@ export default function CheckinForm({ userId, todayCheckin }) {
         style={{
           background: signal.tone === "good"   ? "rgba(78,104,81,.18)"
                     : signal.tone === "warn"   ? "rgba(215,106,74,.18)"
-                    :                            "rgba(248,223,112,.15)",
+                    :                            "rgba(242,104,56,.12)",
           borderColor: signal.tone === "good"  ? "rgba(78,104,81,.7)"
                      : signal.tone === "warn"  ? "rgba(215,106,74,.7)"
-                     :                           "rgba(248,223,112,.55)",
+                     :                           "rgba(242,104,56,.55)",
         }}
       >
         <strong className="block mb-1">Readiness signal</strong>

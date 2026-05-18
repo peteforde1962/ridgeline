@@ -59,7 +59,7 @@ export default async function TodayPage() {
             borderColor:
               readiness.level === "high" ? "rgba(106,138,109,.6)"
               : readiness.level === "low" ? "rgba(215,106,74,.6)"
-              : "rgba(248,223,112,.5)",
+              : "rgba(242,104,56,.5)",
           }}
         >
           <strong>Check-in: </strong>
