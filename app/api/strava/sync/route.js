@@ -17,9 +17,14 @@ export async function POST(request) {
     }
 
     const accessToken = await ensureFreshToken(supabase, profile);
-    const lastSync = profile.strava_last_sync_at
+    // Always look back at LEAST 14 days. Upserts are idempotent on
+    // strava_activity_id, so re-scanning won't duplicate anything.
+    const fourteenDaysAgo = Math.floor((Date.now() - 14 * 86400_000) / 1000);
+    const ninetyDaysAgo   = Math.floor((Date.now() - 90 * 86400_000) / 1000);
+    const sinceLast = profile.strava_last_sync_at
       ? Math.floor(new Date(profile.strava_last_sync_at).getTime() / 1000)
-      : Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000);
+      : ninetyDaysAgo;
+    const lastSync = Math.min(sinceLast, fourteenDaysAgo);
 
     const activities = await fetchAthleteActivities(accessToken, { after: lastSync, perPage: 100 });
     const { data: trails } = await supabase
