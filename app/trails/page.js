@@ -1,30 +1,41 @@
-// /trails — log rides, manage trails, see stats.
+// /trails — rides-first view. Trails appear automatically as you ride; no manual list management.
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import LogRideForm from "@/components/LogRideForm";
-import AddTrailForm from "@/components/AddTrailForm";
 import DeleteRow from "@/components/DeleteRow";
-import MatchTrailsButton from "@/components/MatchTrailsButton";
 import RideTrailsMultiPicker from "@/components/RideTrailsMultiPicker";
+import StravaSyncResult from "@/components/StravaSyncResult";
 
 export default async function TrailsPage() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: trails } = await supabase
-    .from("trails").select("*").eq("user_id", user.id).order("name");
-
-  const { data: rides } = await supabase
-    .from("rides")
-    .select("*, ride_trails(trail_id, trails(id, name))")
-    .eq("user_id", user.id)
-    .order("date", { ascending: false }).limit(25);
+  const [{ data: trails }, { data: rides }] = await Promise.all([
+    supabase.from("trails").select("*").eq("user_id", user.id).order("name"),
+    supabase
+      .from("rides")
+      .select("*, ride_trails(trail_id, trails(id, name))")
+      .eq("user_id", user.id)
+      .order("date", { ascending: false }).limit(25),
+  ]);
 
   const totalKm    = (rides || []).reduce((a, r) => a + (+r.km || 0), 0);
   const totalElev  = (rides || []).reduce((a, r) => a + (+r.elev_m || 0), 0);
   const totalMin   = (rides || []).reduce((a, r) => a + (+r.minutes || 0), 0);
+
+  // Derive: trails that actually have rides on them (more useful than the raw list).
+  const trailRideCount = {};
+  (rides || []).forEach((r) => {
+    (r.ride_trails || []).forEach((rt) => {
+      trailRideCount[rt.trail_id] = (trailRideCount[rt.trail_id] || 0) + 1;
+    });
+  });
+  const riddenTrails = (trails || [])
+    .filter((t) => trailRideCount[t.id] > 0)
+    .map((t) => ({ ...t, rideCount: trailRideCount[t.id] }))
+    .sort((a, b) => b.rideCount - a.rideCount);
 
   return (
     <main className="min-h-screen p-6 max-w-5xl mx-auto">
@@ -42,11 +53,16 @@ export default async function TrailsPage() {
 
       <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
         <h1 className="text-3xl font-extrabold">Trails & Rides</h1>
-        <a href="/trails/discover" className="btn-ghost text-sm">🌍 Discover trails</a>
+        <div className="flex gap-2">
+          <a href="/trails/discover" className="btn-ghost text-sm">🌍 Discover trails</a>
+        </div>
       </div>
-      <p className="text-[var(--muted)] mb-6">Log rides, link multiple trails per ride, track trail PRs.</p>
+      <p className="text-[var(--muted)] mb-6">
+        Sync from Strava — trails you rode auto-populate. You don't manage a list; we figure it out.
+      </p>
 
-      {/* Stats cards */}
+      <StravaSyncResult />
+
       <section className="grid grid-cols-3 gap-3 mb-6">
         <div className="card">
           <div className="text-xs uppercase tracking-wide text-[var(--muted)] mb-1">Total distance</div>
@@ -66,65 +82,21 @@ export default async function TrailsPage() {
         <LogRideForm userId={user.id} trails={trails || []} />
       </section>
 
+      {/* Recent rides — primary view */}
       <section className="card mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold">Your trails</h2>
-          <AddTrailForm userId={user.id} />
-        </div>
-        {!trails || trails.length === 0 ? (
-          <p className="text-[var(--muted)] text-sm">No trails saved yet. Add your local favorites above.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-[var(--muted)] text-xs uppercase tracking-wide">
-                  <th className="text-left p-2">Trail</th>
-                  <th className="text-left p-2">Length</th>
-                  <th className="text-left p-2">Elev</th>
-                  <th className="text-left p-2">Difficulty</th>
-                  <th className="text-left p-2">PR</th>
-                  <th className="text-left p-2">Last ride</th>
-                  <th className="text-right p-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {trails.map((t) => (
-                  <tr key={t.id} className="border-t border-[var(--line)]">
-                    <td className="p-2 font-semibold">{t.name}</td>
-                    <td className="p-2">{t.length_km ? `${t.length_km} km` : "—"}</td>
-                    <td className="p-2">{t.elev_m ? `${t.elev_m} m` : "—"}</td>
-                    <td className="p-2"><span className="text-xs px-2 py-0.5 rounded bg-[var(--panel2)] border border-[var(--line)]">{t.difficulty}</span></td>
-                    <td className="p-2">{t.pr_minutes ? `${t.pr_minutes} min` : <span className="text-[var(--muted)]">—</span>}</td>
-                    <td className="p-2 text-[var(--muted)]">{t.last_ride || "—"}</td>
-                    <td className="p-2 text-right">
-                      <DeleteRow table="trails" id={t.id} confirm={`Delete trail "${t.name}"? Rides linked to it stay logged.`} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="card">
-        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-          <h2 className="text-lg font-bold">Recent rides</h2>
-          <MatchTrailsButton />
-        </div>
+        <h2 className="text-lg font-bold mb-3">Recent rides</h2>
         {!rides || rides.length === 0 ? (
-          <p className="text-[var(--muted)] text-sm">No rides logged yet. Use the form above to log your first.</p>
+          <p className="text-[var(--muted)] text-sm">No rides logged yet. Sync from Strava or use the form above.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[var(--muted)] text-xs uppercase tracking-wide">
                   <th className="text-left p-2">Date</th>
-                  <th className="text-left p-2">Trails</th>
+                  <th className="text-left p-2">Trails ridden</th>
                   <th className="text-left p-2">Distance</th>
                   <th className="text-left p-2">Elev</th>
                   <th className="text-left p-2">Time</th>
-                  <th className="text-left p-2">Feel</th>
                   <th className="text-left p-2">Notes</th>
                   <th className="text-right p-2"></th>
                 </tr>
@@ -141,7 +113,6 @@ export default async function TrailsPage() {
                       <td className="p-2">{r.km ? `${r.km} km` : "—"}</td>
                       <td className="p-2">{r.elev_m ? `${r.elev_m} m` : "—"}</td>
                       <td className="p-2">{r.minutes} min</td>
-                      <td className="p-2">{"⭐".repeat(r.feel || 0)}</td>
                       <td className="p-2 text-[var(--muted)] max-w-xs truncate">{r.notes || ""}</td>
                       <td className="p-2 text-right">
                         <DeleteRow table="rides" id={r.id} confirm="Delete this ride?" />
@@ -154,6 +125,46 @@ export default async function TrailsPage() {
           </div>
         )}
       </section>
+
+      {/* Trails you've actually ridden (derived) — secondary, collapsible */}
+      <details className="card">
+        <summary className="cursor-pointer text-lg font-bold">
+          Trails you've ridden ({riddenTrails.length})
+        </summary>
+        <p className="text-xs text-[var(--muted)] mt-2 mb-3">
+          Auto-populated from your rides. PRs only counted when a ride links to exactly one trail (otherwise the ride time isn't the trail time).
+        </p>
+        {riddenTrails.length === 0 ? (
+          <p className="text-[var(--muted)] text-sm">No trail-linked rides yet — sync Strava or pick trails on rides above.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[var(--muted)] text-xs uppercase tracking-wide">
+                  <th className="text-left p-2">Trail</th>
+                  <th className="text-left p-2">Length</th>
+                  <th className="text-left p-2">Difficulty</th>
+                  <th className="text-left p-2">Rides</th>
+                  <th className="text-left p-2">PR (solo rides only)</th>
+                  <th className="text-left p-2">Last ride</th>
+                </tr>
+              </thead>
+              <tbody>
+                {riddenTrails.map((t) => (
+                  <tr key={t.id} className="border-t border-[var(--line)]">
+                    <td className="p-2 font-semibold">{t.name}</td>
+                    <td className="p-2">{t.length_km ? `${t.length_km} km` : "—"}</td>
+                    <td className="p-2"><span className="text-xs px-2 py-0.5 rounded bg-[var(--panel2)] border border-[var(--line)]">{t.difficulty}</span></td>
+                    <td className="p-2">{t.rideCount}</td>
+                    <td className="p-2">{t.pr_minutes ? `${t.pr_minutes} min` : <span className="text-[var(--muted)]">—</span>}</td>
+                    <td className="p-2 text-[var(--muted)]">{t.last_ride || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </details>
     </main>
   );
 }
