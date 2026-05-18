@@ -185,7 +185,7 @@ export default async function DashboardPage() {
               const color = r == null ? "var(--bg2)"
                 : v <= 3 ? "#d76a4a"
                 : v >= 8 ? "#6a8a6d"
-                : "#dcc9a9";
+                : "#e6e5e3";
               return (
                 <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1" title={r == null ? "no check-in" : `score ${v}`}>
                   <div className="text-[10px] text-[var(--muted)]">{r != null ? v : ""}</div>
@@ -268,7 +268,7 @@ function Kpi({ label, v, sub, pct, accent }) {
   return (
     <div className="card">
       <div className="text-xs uppercase tracking-wide text-[var(--muted)] mb-1">{label}</div>
-      <div className={`text-2xl font-extrabold ${accent ? "text-[var(--accent3,#dcc9a9)]" : ""}`}>{v}</div>
+      <div className={`text-2xl font-extrabold ${accent ? "text-[var(--accent)]" : ""}`}>{v}</div>
       {pct != null && (
         <div className="h-1 rounded-full mt-2" style={{ background: "var(--bg2)" }}>
           <div className="h-full rounded-full" style={{
@@ -286,8 +286,8 @@ function Kpi({ label, v, sub, pct, accent }) {
 
 function MiniMetric({ label, v, invert }) {
   const tone = invert
-    ? (v <= 3 ? "#6a8a6d" : v >= 8 ? "#d76a4a" : "#dcc9a9")
-    : (v >= 8 ? "#6a8a6d" : v <= 3 ? "#d76a4a" : "#dcc9a9");
+    ? (v <= 3 ? "#8fb287" : v >= 8 ? "#d76a4a" : "#e6e5e3")
+    : (v >= 8 ? "#8fb287" : v <= 3 ? "#d76a4a" : "#e6e5e3");
   return (
     <div>
       <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>

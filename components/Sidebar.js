@@ -86,7 +86,7 @@ export default function Sidebar() {
         href={item.href}
         className="sb-row"
         style={{
-          background: active ? "rgba(184,58,45,.15)" : "transparent",
+          background: active ? "rgba(248,223,112,.15)" : "transparent",
           color: active ? "var(--text)" : "var(--muted)",
           borderLeft: active ? "3px solid var(--accent)" : "3px solid transparent",
         }}

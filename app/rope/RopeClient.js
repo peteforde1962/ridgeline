@@ -11,7 +11,7 @@ export default function RopeClient({ drills }) {
       renderItem={(d, i) => (
         <div key={d.id} className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "var(--panel2)", border: "1px solid var(--line)" }}>
           <div className="w-8 h-8 rounded-md grid place-items-center font-bold flex-shrink-0"
-               style={{ background: "rgba(184,58,45,.2)", color: "var(--accent3,#dcc9a9)" }}>
+               style={{ background: "rgba(248,223,112,.2)", color: "var(--accent)" }}>
             {i + 1}
           </div>
           <div className="flex-1">

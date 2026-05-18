@@ -140,7 +140,7 @@ export default function CoachChat({ context }) {
                 className="mb-2 p-2 rounded-md text-sm"
                 style={
                   m.role === "user"
-                    ? { background: "rgba(184,58,45,.15)", border: "1px solid rgba(184,58,45,.5)", marginLeft: "10%" }
+                    ? { background: "rgba(248,223,112,.15)", border: "1px solid rgba(248,223,112,.5)", marginLeft: "10%" }
                     : { background: "var(--panel)", border: "1px solid var(--line)", marginRight: "10%" }
                 }
               >

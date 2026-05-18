@@ -3,34 +3,34 @@
 @tailwind utilities;
 
 /*
-  RidgeLine palette — warm trail / dusk:
-    #DCC9A9  cream (text, warm highlights)
-    #B83A2D  brick red (primary accent)
-    #4E6851  forest green (structural, borders, secondary)
+  RidgeLine palette — warm minimal:
+    #f8df70  warm yellow (primary accent)
+    #524b48  dark taupe (borders, structure)
+    #a2a1a1  light gray (muted text)
 */
 
 :root {
-  --bg:      #1a221b;   /* deep forest, slightly warm */
-  --bg2:     #232c24;   /* card-section background */
-  --panel:   #2c3a2f;   /* card surface */
-  --panel2:  #38483a;   /* card surface, raised */
-  --line:    #4e6851;   /* forest green — primary border */
-  --text:    #dcc9a9;   /* cream */
-  --muted:   #a99e7f;   /* muted cream */
+  --bg:      #1a1816;   /* near-black warm */
+  --bg2:     #221f1c;   /* card-section background */
+  --panel:   #2c2825;   /* card surface */
+  --panel2:  #3a3531;   /* card surface, raised */
+  --line:    #524b48;   /* dark taupe — primary border */
+  --text:    #e6e5e3;   /* off-white for body */
+  --muted:   #a2a1a1;   /* light gray for muted text */
 
-  --accent:  #b83a2d;   /* brick red — primary action */
-  --accent2: #d35a40;   /* lighter brick for hover */
-  --accent3: #dcc9a9;   /* cream as warm accent */
+  --accent:  #f8df70;   /* warm yellow — primary action */
+  --accent2: #fce896;   /* lighter yellow for hover */
+  --accent3: #f8df70;   /* same yellow as warm highlight */
 
-  --green:   #6a8a6d;   /* slightly lighter forest, for success */
+  --green:   #8fb287;   /* sage green for success (subtle) */
   --red:     #d76a4a;   /* warm error red */
-  --blue:    #7a9eaa;   /* warm dusty blue for variety */
+  --blue:    #8aa3a9;   /* dusty blue-gray for variety */
 }
 
 html, body {
   height: 100%;
   background:
-    radial-gradient(1400px 700px at 70% -10%, #2a3d2c 0%, var(--bg) 60%) fixed;
+    radial-gradient(1400px 700px at 70% -10%, #2e2a25 0%, var(--bg) 60%) fixed;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -39,10 +39,11 @@ html, body {
 /* Brand mark */
 .logo-mark {
   width: 32px; height: 32px; border-radius: 9px;
-  background: linear-gradient(135deg, var(--accent), #7a2418);
+  background: linear-gradient(135deg, var(--accent), #c9a830);
   display: grid; place-items: center;
-  box-shadow: 0 4px 18px rgba(184, 58, 45, 0.4);
+  box-shadow: 0 4px 18px rgba(248, 223, 112, 0.35);
 }
+.logo-mark svg { stroke: #1a1816; }
 
 /* Form controls */
 .field-label {
@@ -65,7 +66,7 @@ html, body {
 /* Buttons */
 .btn-primary {
   background: var(--accent);
-  color: #fff5e0;
+  color: #1a1816;
   border: 0;
   padding: 12px 20px;
   border-radius: 10px;
@@ -181,8 +182,8 @@ th, td { padding: 10px 8px; }
   text-align: center;
 }
 .tabbar a.active {
-  color: var(--accent3);
-  background: rgba(184, 58, 45, 0.15);
+  color: var(--accent);
+  background: rgba(248, 223, 112, 0.15);
 }
 .tabbar a .ico { font-size: 18px; line-height: 1; }
 @media (max-width: 768px) {

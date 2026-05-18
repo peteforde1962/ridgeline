@@ -68,7 +68,7 @@ export default async function PlanPage() {
               key={p.key}
               className={`p-3 rounded-lg text-center ${isCurrent ? "border-2" : "border"}`}
               style={{
-                background: isCurrent ? "rgba(184,58,45,.10)" : "var(--panel)",
+                background: isCurrent ? "rgba(248,223,112,.12)" : "var(--panel)",
                 borderColor: isCurrent ? "var(--accent)" : "var(--line)",
               }}
             >
@@ -119,7 +119,7 @@ export default async function PlanPage() {
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[var(--muted)]">{stats.done}/{stats.scheduled} done</span>
                   {isCurrent && (
-                    <span className="text-xs font-bold px-2 py-1 rounded bg-[#b83a2d]/20 text-[#dcc9a9] border border-[#b83a2d]/60">
+                    <span className="text-xs font-bold px-2 py-1 rounded bg-[#f8df70]/20 text-[#f8df70] border border-[#f8df70]/60">
                       Current
                     </span>
                   )}

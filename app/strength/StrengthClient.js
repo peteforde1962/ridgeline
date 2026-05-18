@@ -14,7 +14,7 @@ export default function StrengthClient({ exercises }) {
           <div className="flex-1">
             <div className="flex items-center justify-between gap-3 mb-1">
               <span className="font-bold">{e.name}</span>
-              <span className="text-xs font-semibold text-[var(--accent3,#dcc9a9)] whitespace-nowrap">{e.sets}</span>
+              <span className="text-xs font-semibold text-[var(--accent)] whitespace-nowrap">{e.sets}</span>
             </div>
             <p className="text-sm text-[var(--muted)] mb-2">{e.note}</p>
             <div className="flex flex-wrap gap-1">

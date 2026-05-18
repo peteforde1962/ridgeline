@@ -47,7 +47,7 @@ export default async function PlanDayPage({ params }) {
 
       <div className="flex items-center justify-between mb-2">
         <a href="/plan" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">← Full plan</a>
-        {isToday && <span className="text-xs px-2 py-1 rounded bg-[#b83a2d]/20 text-[#dcc9a9] border border-[#b83a2d]/60">Today</span>}
+        {isToday && <span className="text-xs px-2 py-1 rounded bg-[#f8df70]/20 text-[#f8df70] border border-[#f8df70]/60">Today</span>}
       </div>
 
       <h1 className="text-3xl font-extrabold mb-1">
