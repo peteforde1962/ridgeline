@@ -1,20 +1,16 @@
 // /api/strava/webhook
-//   GET  — Strava's subscription verification handshake. Echoes back hub.challenge.
-//   POST — Strava push events. We fetch the new activity and insert it as a ride.
-//
-// This route is public (no auth session) — it's called by Strava's servers.
-// We use the service-role Supabase client to update across users.
+//   GET  — Strava verification handshake.
+//   POST — Strava push event. Fetch the activity, insert as a ride, link all matching trails.
 
 import { adminClient } from "@/lib/supabase/admin";
 import { ensureFreshToken, activityToRide } from "@/lib/strava";
-import { matchTrail } from "@/lib/trail-match";
+import { matchTrails } from "@/lib/trail-match";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const STRAVA_API = "https://www.strava.com/api/v3";
 
-// ----- Subscription verification handshake -----
 export async function GET(request) {
   const url = new URL(request.url);
   const mode      = url.searchParams.get("hub.mode");
@@ -27,18 +23,14 @@ export async function GET(request) {
   return Response.json({ error: "verification failed" }, { status: 403 });
 }
 
-// ----- Activity events -----
 export async function POST(request) {
   try {
     const event = await request.json();
-    // Only care about activity creates for now.
     if (event.object_type !== "activity" || event.aspect_type !== "create") {
       return Response.json({ ok: true, ignored: true });
     }
 
     const admin = adminClient();
-
-    // Find the RidgeLine user whose Strava athlete id matches.
     const { data: profile } = await admin.from("profiles")
       .select("*")
       .eq("strava_athlete_id", event.owner_id)
@@ -48,10 +40,7 @@ export async function POST(request) {
       return Response.json({ ok: true, note: "no matching user" });
     }
 
-    // Refresh token if needed
     const accessToken = await ensureFreshToken(admin, profile);
-
-    // Fetch the activity
     const actRes = await fetch(`${STRAVA_API}/activities/${event.object_id}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
@@ -62,19 +51,27 @@ export async function POST(request) {
     const row = activityToRide(activity, profile.id);
     if (!row) return Response.json({ ok: true, ignored: "non-cycling" });
 
-    // Auto-match to a trail
     const { data: trails } = await admin
       .from("trails").select("id, name").eq("user_id", profile.id);
-    const trailId = matchTrail(activity.name, trails || []);
-    if (trailId) row.trail_id = trailId;
+    const matchedIds = matchTrails(activity.name, trails || []);
+    row.trail_id = matchedIds[0] || null;
 
-    // Upsert (ignore if already imported)
-    const { error: upErr } = await admin
+    // Upsert the ride (idempotent on strava_activity_id).
+    const { data: rideIns, error: upErr } = await admin
       .from("rides")
-      .upsert([row], { onConflict: "user_id,strava_activity_id", ignoreDuplicates: true });
+      .upsert([row], { onConflict: "user_id,strava_activity_id", ignoreDuplicates: false })
+      .select("id")
+      .single();
     if (upErr) return Response.json({ ok: false, error: upErr.message }, { status: 500 });
 
-    return Response.json({ ok: true, inserted: true });
+    // Link all matched trails.
+    if (rideIns?.id && matchedIds.length > 0) {
+      const links = matchedIds.map(tid => ({ ride_id: rideIns.id, trail_id: tid }));
+      await admin.from("ride_trails")
+        .upsert(links, { onConflict: "ride_id,trail_id", ignoreDuplicates: true });
+    }
+
+    return Response.json({ ok: true, inserted: true, linkedTrails: matchedIds.length });
   } catch (e) {
     return Response.json({ ok: false, error: e.message }, { status: 500 });
   }

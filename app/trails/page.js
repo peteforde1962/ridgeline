@@ -6,7 +6,7 @@ import LogRideForm from "@/components/LogRideForm";
 import AddTrailForm from "@/components/AddTrailForm";
 import DeleteRow from "@/components/DeleteRow";
 import MatchTrailsButton from "@/components/MatchTrailsButton";
-import RideTrailPicker from "@/components/RideTrailPicker";
+import RideTrailsMultiPicker from "@/components/RideTrailsMultiPicker";
 
 export default async function TrailsPage() {
   const supabase = createClient();
@@ -17,33 +17,34 @@ export default async function TrailsPage() {
     .from("trails").select("*").eq("user_id", user.id).order("name");
 
   const { data: rides } = await supabase
-    .from("rides").select("*, trails(name)").eq("user_id", user.id)
+    .from("rides")
+    .select("*, ride_trails(trail_id, trails(id, name))")
+    .eq("user_id", user.id)
     .order("date", { ascending: false }).limit(25);
 
-  // Aggregate stats (metric)
   const totalKm    = (rides || []).reduce((a, r) => a + (+r.km || 0), 0);
   const totalElev  = (rides || []).reduce((a, r) => a + (+r.elev_m || 0), 0);
   const totalMin   = (rides || []).reduce((a, r) => a + (+r.minutes || 0), 0);
 
   return (
     <main className="min-h-screen p-6 max-w-5xl mx-auto">
-      <header className="flex items-center justify-between mb-6">
+      <header className="flex items-center justify-between mb-6 md:hidden">
         <a href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">← Dashboard</a>
-        <div className="flex items-center gap-2">
+        <a href="/dashboard" className="flex items-center gap-2">
           <div className="logo-mark">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 19l5-9 3 5 4-7 6 11z" />
             </svg>
           </div>
-          <div className="font-extrabold text-sm">RidgeLine</div>
-        </div>
+          <span className="font-extrabold text-sm">RidgeLine</span>
+        </a>
       </header>
 
       <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
         <h1 className="text-3xl font-extrabold">Trails & Rides</h1>
         <a href="/trails/discover" className="btn-ghost text-sm">🌍 Discover trails</a>
       </div>
-      <p className="text-[var(--muted)] mb-6">Log rides, track trail PRs, see where your saddle time goes.</p>
+      <p className="text-[var(--muted)] mb-6">Log rides, link multiple trails per ride, track trail PRs.</p>
 
       {/* Stats cards */}
       <section className="grid grid-cols-3 gap-3 mb-6">
@@ -61,12 +62,10 @@ export default async function TrailsPage() {
         </div>
       </section>
 
-      {/* Log a ride */}
       <section className="mb-6">
         <LogRideForm userId={user.id} trails={trails || []} />
       </section>
 
-      {/* Trails table */}
       <section className="card mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold">Your trails</h2>
@@ -94,7 +93,7 @@ export default async function TrailsPage() {
                     <td className="p-2 font-semibold">{t.name}</td>
                     <td className="p-2">{t.length_km ? `${t.length_km} km` : "—"}</td>
                     <td className="p-2">{t.elev_m ? `${t.elev_m} m` : "—"}</td>
-                    <td className="p-2"><span className="text-xs px-2 py-0.5 rounded bg-[var(--panel2,#1d2a23)] border border-[var(--line)]">{t.difficulty}</span></td>
+                    <td className="p-2"><span className="text-xs px-2 py-0.5 rounded bg-[var(--panel2)] border border-[var(--line)]">{t.difficulty}</span></td>
                     <td className="p-2">{t.pr_minutes ? `${t.pr_minutes} min` : <span className="text-[var(--muted)]">—</span>}</td>
                     <td className="p-2 text-[var(--muted)]">{t.last_ride || "—"}</td>
                     <td className="p-2 text-right">
@@ -108,7 +107,6 @@ export default async function TrailsPage() {
         )}
       </section>
 
-      {/* Recent rides */}
       <section className="card">
         <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
           <h2 className="text-lg font-bold">Recent rides</h2>
@@ -122,7 +120,7 @@ export default async function TrailsPage() {
               <thead>
                 <tr className="text-[var(--muted)] text-xs uppercase tracking-wide">
                   <th className="text-left p-2">Date</th>
-                  <th className="text-left p-2">Trail</th>
+                  <th className="text-left p-2">Trails</th>
                   <th className="text-left p-2">Distance</th>
                   <th className="text-left p-2">Elev</th>
                   <th className="text-left p-2">Time</th>
@@ -132,22 +130,25 @@ export default async function TrailsPage() {
                 </tr>
               </thead>
               <tbody>
-                {rides.map((r) => (
-                  <tr key={r.id} className="border-t border-[var(--line)]">
-                    <td className="p-2 whitespace-nowrap">{r.date}</td>
-                    <td className="p-2">
-                      <RideTrailPicker rideId={r.id} currentTrailId={r.trail_id} trails={trails || []} />
-                    </td>
-                    <td className="p-2">{r.km ? `${r.km} km` : "—"}</td>
-                    <td className="p-2">{r.elev_m ? `${r.elev_m} m` : "—"}</td>
-                    <td className="p-2">{r.minutes} min</td>
-                    <td className="p-2">{"⭐".repeat(r.feel || 0)}</td>
-                    <td className="p-2 text-[var(--muted)] max-w-xs truncate">{r.notes || ""}</td>
-                    <td className="p-2 text-right">
-                      <DeleteRow table="rides" id={r.id} confirm="Delete this ride?" />
-                    </td>
-                  </tr>
-                ))}
+                {rides.map((r) => {
+                  const linkedIds = (r.ride_trails || []).map(rt => rt.trail_id);
+                  return (
+                    <tr key={r.id} className="border-t border-[var(--line)] align-top">
+                      <td className="p-2 whitespace-nowrap">{r.date}</td>
+                      <td className="p-2">
+                        <RideTrailsMultiPicker rideId={r.id} linkedTrailIds={linkedIds} trails={trails || []} />
+                      </td>
+                      <td className="p-2">{r.km ? `${r.km} km` : "—"}</td>
+                      <td className="p-2">{r.elev_m ? `${r.elev_m} m` : "—"}</td>
+                      <td className="p-2">{r.minutes} min</td>
+                      <td className="p-2">{"⭐".repeat(r.feel || 0)}</td>
+                      <td className="p-2 text-[var(--muted)] max-w-xs truncate">{r.notes || ""}</td>
+                      <td className="p-2 text-right">
+                        <DeleteRow table="rides" id={r.id} confirm="Delete this ride?" />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

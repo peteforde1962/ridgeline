@@ -1,9 +1,8 @@
-// POST /api/strava/sync — pull recent activities from Strava, import into rides.
-// Idempotent: existing Strava activities won't be duplicated thanks to a unique index.
+// POST /api/strava/sync — pull recent activities from Strava, import as rides + link trails.
 
 import { createClient } from "@/lib/supabase/server";
 import { ensureFreshToken, fetchAthleteActivities, activityToRide } from "@/lib/strava";
-import { matchTrail } from "@/lib/trail-match";
+import { matchTrails } from "@/lib/trail-match";
 
 export async function POST(request) {
   try {
@@ -13,40 +12,58 @@ export async function POST(request) {
 
     const { data: profile } = await supabase
       .from("profiles").select("*").eq("id", user.id).single();
-
     if (!profile?.strava_refresh_token) {
       return Response.json({ error: "Strava not connected" }, { status: 400 });
     }
 
     const accessToken = await ensureFreshToken(supabase, profile);
-
-    // Pull only activities newer than the last sync (or last 90 days for first sync).
     const lastSync = profile.strava_last_sync_at
       ? Math.floor(new Date(profile.strava_last_sync_at).getTime() / 1000)
       : Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000);
 
     const activities = await fetchAthleteActivities(accessToken, { after: lastSync, perPage: 100 });
-
-    // Load user's trails once so we can auto-match each activity to a trail.
     const { data: trails } = await supabase
       .from("trails").select("id, name").eq("user_id", user.id);
 
-    const rows = activities.map((a) => {
-      const row = activityToRide(a, user.id);
-      if (!row) return null;
-      const matchedTrailId = matchTrail(a.name, trails || []);
-      if (matchedTrailId) row.trail_id = matchedTrailId;
-      return row;
-    }).filter(Boolean);
+    // Build rows + a parallel array of trail-id arrays per activity.
+    const prepared = activities
+      .map((a) => {
+        const row = activityToRide(a, user.id);
+        if (!row) return null;
+        const matchedIds = matchTrails(a.name, trails || []);
+        row.trail_id = matchedIds[0] || null; // primary, back-compat
+        return { row, matchedIds };
+      })
+      .filter(Boolean);
 
-    let inserted = 0, skipped = 0, matched = 0;
-    matched = rows.filter((r) => r.trail_id).length;
-    if (rows.length > 0) {
+    let inserted = 0, skipped = 0, totalLinks = 0;
+
+    if (prepared.length > 0) {
+      const rows = prepared.map(p => p.row);
       const { data: ins, error } = await supabase
         .from("rides")
-        .upsert(rows, { onConflict: "user_id,strava_activity_id", ignoreDuplicates: true })
-        .select("id");
+        .upsert(rows, { onConflict: "user_id,strava_activity_id", ignoreDuplicates: false })
+        .select("id, strava_activity_id");
       if (error) return Response.json({ error: error.message }, { status: 500 });
+
+      // Map strava_activity_id → returned ride id to insert join rows.
+      const rideIdByStrava = {};
+      (ins || []).forEach(r => { rideIdByStrava[r.strava_activity_id] = r.id; });
+
+      const allLinks = [];
+      for (const p of prepared) {
+        const rideId = rideIdByStrava[p.row.strava_activity_id];
+        if (!rideId) continue;
+        p.matchedIds.forEach((tid) => allLinks.push({ ride_id: rideId, trail_id: tid }));
+      }
+      if (allLinks.length > 0) {
+        const { data: linkIns } = await supabase
+          .from("ride_trails")
+          .upsert(allLinks, { onConflict: "ride_id,trail_id", ignoreDuplicates: true })
+          .select("ride_id");
+        totalLinks = (linkIns || []).length;
+      }
+
       inserted = (ins || []).length;
       skipped = rows.length - inserted;
     }
@@ -58,10 +75,9 @@ export async function POST(request) {
     return Response.json({
       ok: true,
       fetched: activities.length,
-      cyclingFiltered: rows.length,
-      inserted,
-      skipped,
-      matched,
+      cyclingFiltered: prepared.length,
+      inserted, skipped,
+      matched: totalLinks,
     });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
