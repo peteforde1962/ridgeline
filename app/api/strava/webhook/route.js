@@ -70,9 +70,11 @@ export async function POST(request) {
         : null,
     }));
 
+    // Re-detection: wipe and re-insert so seconds_on_trail always refreshes.
+    await admin.from("ride_trails").delete().eq("ride_id", rideIns.id);
+
     if (links.length > 0) {
-      await admin.from("ride_trails")
-        .upsert(links, { onConflict: "ride_id,trail_id", ignoreDuplicates: false });
+      await admin.from("ride_trails").insert(links);
       const primary = detection.matches
         .slice().sort((a, b) => (b.points || 0) - (a.points || 0))[0];
       if (primary) {

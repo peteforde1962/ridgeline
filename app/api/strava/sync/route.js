@@ -80,9 +80,12 @@ export async function POST(request) {
         ...(detection.details || {}),
       });
 
+      // Re-detection: wipe existing links and write the fresh set. This avoids
+      // any RLS UPDATE quirks and ensures seconds_on_trail gets refreshed.
+      await supabase.from("ride_trails").delete().eq("ride_id", rideRow.id);
+
       if (links.length > 0) {
-        await supabase.from("ride_trails")
-          .upsert(links, { onConflict: "ride_id,trail_id", ignoreDuplicates: false });
+        await supabase.from("ride_trails").insert(links);
         totalLinks += links.length;
 
         // Back-compat: also set rides.trail_id to the trail with most points.
