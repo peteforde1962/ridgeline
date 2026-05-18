@@ -1,4 +1,4 @@
-// POST /api/strava/sync — pull activities from Strava, import as rides, auto-detect trails.
+// POST /api/strava/sync — import activities, GPS-detect trails, write per-trail times.
 
 import { createClient } from "@/lib/supabase/server";
 import { ensureFreshToken, fetchAthleteActivities, activityToRide } from "@/lib/strava";
@@ -21,7 +21,6 @@ export async function POST(request) {
 
     const accessToken = await ensureFreshToken(supabase, profile);
 
-    // Always look back at LEAST 14 days. Upserts are idempotent on strava_activity_id.
     const fourteenDaysAgo = Math.floor((Date.now() - 14 * 86400_000) / 1000);
     const ninetyDaysAgo   = Math.floor((Date.now() - 90 * 86400_000) / 1000);
     const sinceLast = profile.strava_last_sync_at
@@ -36,7 +35,7 @@ export async function POST(request) {
       .from("trails").select("id, name, length_km, elev_m").eq("user_id", user.id);
     const trailsCache = [...(userTrails || [])];
 
-    let inserted = 0, skipped = 0, totalLinks = 0, nonCycling = 0;
+    let inserted = 0, nonCycling = 0, totalLinks = 0;
 
     for (const activity of activities) {
       const row = activityToRide(activity, user.id);
@@ -46,11 +45,10 @@ export async function POST(request) {
         continue;
       }
 
-      // Upsert the ride.
       const { data: rideRow, error: upErr } = await supabase
         .from("rides")
         .upsert([row], { onConflict: "user_id,strava_activity_id", ignoreDuplicates: false })
-        .select("id")
+        .select("id, minutes")
         .single();
       if (upErr) {
         debug.push({ act: activity.id, error: upErr.message });
@@ -58,43 +56,46 @@ export async function POST(request) {
       }
       inserted++;
 
-      // Detect trails (user's own first, then OSM).
       const detection = await detectTrailsForActivity({
         supabase, userId: user.id, activity, userTrails: trailsCache,
       });
 
+      // Compute per-trail seconds from point counts × total moving time.
+      const totalPoints = detection.matches.reduce((a, m) => a + (m.points || 0), 0);
+      const totalSeconds = (row.minutes || 0) * 60;
+
+      const links = detection.matches.map((m) => ({
+        ride_id: rideRow.id,
+        trail_id: m.trailId,
+        points_on_trail: m.points || null,
+        seconds_on_trail: totalPoints > 0 && m.points
+          ? Math.round((m.points / totalPoints) * totalSeconds)
+          : null,
+      }));
+
       debug.push({
         act: activity.id, name: activity.name,
         date: activity.start_date_local?.slice(0, 10),
-        trails: detection.trailIds.length, source: detection.source,
+        trails: detection.matches.length, source: detection.source,
+        ...(detection.details || {}),
       });
 
-      if (detection.trailIds.length > 0) {
-        const links = detection.trailIds.map((tid) => ({ ride_id: rideRow.id, trail_id: tid }));
+      if (links.length > 0) {
         await supabase.from("ride_trails")
-          .upsert(links, { onConflict: "ride_id,trail_id", ignoreDuplicates: true });
-        totalLinks += detection.trailIds.length;
+          .upsert(links, { onConflict: "ride_id,trail_id", ignoreDuplicates: false });
+        totalLinks += links.length;
 
-        // Update primary trail_id back-compat
-        await supabase.from("rides").update({ trail_id: detection.trailIds[0] }).eq("id", rideRow.id);
-
-        // PR update only when ride is linked to a single trail (full ride = that trail).
-        if (detection.trailIds.length === 1) {
-          const tid = detection.trailIds[0];
-          const t = trailsCache.find((x) => x.id === tid);
-          if (t) {
-            const newMin = row.minutes;
-            const newPR = !t.pr_minutes || newMin < t.pr_minutes ? newMin : t.pr_minutes;
-            await supabase.from("trails")
-              .update({ pr_minutes: newPR, last_ride: row.date })
-              .eq("id", tid);
-          }
-        } else {
-          // Just update last_ride for each linked trail.
-          await supabase.from("trails")
-            .update({ last_ride: row.date })
-            .in("id", detection.trailIds);
+        // Back-compat: also set rides.trail_id to the trail with most points.
+        const primary = detection.matches
+          .slice().sort((a, b) => (b.points || 0) - (a.points || 0))[0];
+        if (primary) {
+          await supabase.from("rides").update({ trail_id: primary.trailId }).eq("id", rideRow.id);
         }
+
+        // Update trails.last_ride for everything linked.
+        await supabase.from("trails")
+          .update({ last_ride: row.date })
+          .in("id", detection.matches.map(m => m.trailId));
       }
     }
 
@@ -105,9 +106,7 @@ export async function POST(request) {
     return Response.json({
       ok: true,
       fetched: activities.length,
-      cyclingFiltered: inserted + nonCycling,
-      inserted,
-      nonCycling,
+      inserted, nonCycling,
       matched: totalLinks,
       debug,
     });

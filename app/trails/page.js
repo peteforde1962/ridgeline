@@ -1,10 +1,10 @@
-// /trails — rides-first view. Trails appear automatically as you ride; no manual list management.
+// /trails — rides-first. Recent rides table is clean (date/distance/elev/time/notes).
+// Click a row → /rides/[id] for per-trail breakdown.
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import LogRideForm from "@/components/LogRideForm";
 import DeleteRow from "@/components/DeleteRow";
-import RideTrailsMultiPicker from "@/components/RideTrailsMultiPicker";
 import StravaSyncResult from "@/components/StravaSyncResult";
 
 export default async function TrailsPage() {
@@ -16,7 +16,7 @@ export default async function TrailsPage() {
     supabase.from("trails").select("*").eq("user_id", user.id).order("name"),
     supabase
       .from("rides")
-      .select("*, ride_trails(trail_id, trails(id, name))")
+      .select("id, date, km, elev_m, minutes, notes, ride_trails(trail_id, seconds_on_trail)")
       .eq("user_id", user.id)
       .order("date", { ascending: false }).limit(25),
   ]);
@@ -25,17 +25,22 @@ export default async function TrailsPage() {
   const totalElev  = (rides || []).reduce((a, r) => a + (+r.elev_m || 0), 0);
   const totalMin   = (rides || []).reduce((a, r) => a + (+r.minutes || 0), 0);
 
-  // Derive: trails that actually have rides on them (more useful than the raw list).
-  const trailRideCount = {};
+  // Compute "trails you've ridden" with fastest time per trail (min seconds_on_trail).
+  const trailStats = {}; // trail_id -> { count, fastestSec }
   (rides || []).forEach((r) => {
     (r.ride_trails || []).forEach((rt) => {
-      trailRideCount[rt.trail_id] = (trailRideCount[rt.trail_id] || 0) + 1;
+      const s = trailStats[rt.trail_id] || { count: 0, fastestSec: null };
+      s.count++;
+      if (rt.seconds_on_trail != null) {
+        if (s.fastestSec == null || rt.seconds_on_trail < s.fastestSec) s.fastestSec = rt.seconds_on_trail;
+      }
+      trailStats[rt.trail_id] = s;
     });
   });
   const riddenTrails = (trails || [])
-    .filter((t) => trailRideCount[t.id] > 0)
-    .map((t) => ({ ...t, rideCount: trailRideCount[t.id] }))
-    .sort((a, b) => b.rideCount - a.rideCount);
+    .filter((t) => trailStats[t.id])
+    .map((t) => ({ ...t, ...trailStats[t.id] }))
+    .sort((a, b) => b.count - a.count);
 
   return (
     <main className="min-h-screen p-6 max-w-5xl mx-auto">
@@ -53,12 +58,10 @@ export default async function TrailsPage() {
 
       <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
         <h1 className="text-3xl font-extrabold">Trails & Rides</h1>
-        <div className="flex gap-2">
-          <a href="/trails/discover" className="btn-ghost text-sm">🌍 Discover trails</a>
-        </div>
+        <a href="/trails/discover" className="btn-ghost text-sm">🌍 Discover trails</a>
       </div>
       <p className="text-[var(--muted)] mb-6">
-        Sync from Strava — trails you rode auto-populate. You don't manage a list; we figure it out.
+        Strava rides import automatically and trails auto-populate via GPS. Click any ride for per-trail breakdown.
       </p>
 
       <StravaSyncResult />
@@ -82,7 +85,6 @@ export default async function TrailsPage() {
         <LogRideForm userId={user.id} trails={trails || []} />
       </section>
 
-      {/* Recent rides — primary view */}
       <section className="card mb-6">
         <h2 className="text-lg font-bold mb-3">Recent rides</h2>
         {!rides || rides.length === 0 ? (
@@ -93,27 +95,27 @@ export default async function TrailsPage() {
               <thead>
                 <tr className="text-[var(--muted)] text-xs uppercase tracking-wide">
                   <th className="text-left p-2">Date</th>
-                  <th className="text-left p-2">Trails ridden</th>
                   <th className="text-left p-2">Distance</th>
                   <th className="text-left p-2">Elev</th>
                   <th className="text-left p-2">Time</th>
+                  <th className="text-left p-2">Trails</th>
                   <th className="text-left p-2">Notes</th>
                   <th className="text-right p-2"></th>
                 </tr>
               </thead>
               <tbody>
                 {rides.map((r) => {
-                  const linkedIds = (r.ride_trails || []).map(rt => rt.trail_id);
+                  const trailCount = r.ride_trails?.length || 0;
                   return (
-                    <tr key={r.id} className="border-t border-[var(--line)] align-top">
-                      <td className="p-2 whitespace-nowrap">{r.date}</td>
-                      <td className="p-2">
-                        <RideTrailsMultiPicker rideId={r.id} linkedTrailIds={linkedIds} trails={trails || []} />
+                    <tr key={r.id} className="border-t border-[var(--line)] hover:bg-[var(--panel2)] cursor-pointer">
+                      <td className="p-2 whitespace-nowrap">
+                        <a href={`/rides/${r.id}`} className="block">{r.date}</a>
                       </td>
-                      <td className="p-2">{r.km ? `${r.km} km` : "—"}</td>
-                      <td className="p-2">{r.elev_m ? `${r.elev_m} m` : "—"}</td>
-                      <td className="p-2">{r.minutes} min</td>
-                      <td className="p-2 text-[var(--muted)] max-w-xs truncate">{r.notes || ""}</td>
+                      <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.km ? `${r.km} km` : "—"}</a></td>
+                      <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.elev_m ? `${r.elev_m} m` : "—"}</a></td>
+                      <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.minutes} min</a></td>
+                      <td className="p-2"><a href={`/rides/${r.id}`} className="block">{trailCount > 0 ? `${trailCount} →` : "—"}</a></td>
+                      <td className="p-2 text-[var(--muted)] max-w-xs truncate"><a href={`/rides/${r.id}`} className="block">{r.notes || ""}</a></td>
                       <td className="p-2 text-right">
                         <DeleteRow table="rides" id={r.id} confirm="Delete this ride?" />
                       </td>
@@ -126,16 +128,15 @@ export default async function TrailsPage() {
         )}
       </section>
 
-      {/* Trails you've actually ridden (derived) — secondary, collapsible */}
       <details className="card">
         <summary className="cursor-pointer text-lg font-bold">
           Trails you've ridden ({riddenTrails.length})
         </summary>
         <p className="text-xs text-[var(--muted)] mt-2 mb-3">
-          Auto-populated from your rides. PRs only counted when a ride links to exactly one trail (otherwise the ride time isn't the trail time).
+          Auto-populated from your rides. Fastest time = shortest tracked time on the trail across all rides.
         </p>
         {riddenTrails.length === 0 ? (
-          <p className="text-[var(--muted)] text-sm">No trail-linked rides yet — sync Strava or pick trails on rides above.</p>
+          <p className="text-[var(--muted)] text-sm">No trail-linked rides yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -145,8 +146,7 @@ export default async function TrailsPage() {
                   <th className="text-left p-2">Length</th>
                   <th className="text-left p-2">Difficulty</th>
                   <th className="text-left p-2">Rides</th>
-                  <th className="text-left p-2">PR (solo rides only)</th>
-                  <th className="text-left p-2">Last ride</th>
+                  <th className="text-left p-2">Fastest time</th>
                 </tr>
               </thead>
               <tbody>
@@ -155,9 +155,8 @@ export default async function TrailsPage() {
                     <td className="p-2 font-semibold">{t.name}</td>
                     <td className="p-2">{t.length_km ? `${t.length_km} km` : "—"}</td>
                     <td className="p-2"><span className="text-xs px-2 py-0.5 rounded bg-[var(--panel2)] border border-[var(--line)]">{t.difficulty}</span></td>
-                    <td className="p-2">{t.rideCount}</td>
-                    <td className="p-2">{t.pr_minutes ? `${t.pr_minutes} min` : <span className="text-[var(--muted)]">—</span>}</td>
-                    <td className="p-2 text-[var(--muted)]">{t.last_ride || "—"}</td>
+                    <td className="p-2">{t.count}</td>
+                    <td className="p-2">{t.fastestSec != null ? `${formatTime(t.fastestSec)}` : <span className="text-[var(--muted)]">— (sync needed)</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -167,4 +166,11 @@ export default async function TrailsPage() {
       </details>
     </main>
   );
+}
+
+function formatTime(seconds) {
+  if (seconds == null) return "—";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }

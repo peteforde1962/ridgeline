@@ -1,6 +1,4 @@
-// /api/strava/webhook
-//   GET  — Strava verification handshake.
-//   POST — Strava push event. Imports the activity, auto-detects trails, links them.
+// /api/strava/webhook — auto-import + GPS detection + per-trail time.
 
 import { adminClient } from "@/lib/supabase/admin";
 import { ensureFreshToken, activityToRide } from "@/lib/strava";
@@ -17,7 +15,6 @@ export async function GET(request) {
   const mode      = url.searchParams.get("hub.mode");
   const verify    = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
-
   if (mode === "subscribe" && verify === process.env.STRAVA_VERIFY_TOKEN) {
     return Response.json({ "hub.challenge": challenge });
   }
@@ -36,17 +33,14 @@ export async function POST(request) {
       .select("*")
       .eq("strava_athlete_id", event.owner_id)
       .maybeSingle();
-    if (!profile?.strava_refresh_token) {
-      return Response.json({ ok: true, note: "no matching user" });
-    }
+    if (!profile?.strava_refresh_token) return Response.json({ ok: true, note: "no matching user" });
 
     const accessToken = await ensureFreshToken(admin, profile);
     const actRes = await fetch(`${STRAVA_API}/activities/${event.object_id}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!actRes.ok) {
-      return Response.json({ ok: false, error: "strava fetch failed" }, { status: 502 });
-    }
+    if (!actRes.ok) return Response.json({ ok: false, error: "strava fetch failed" }, { status: 502 });
+
     const activity = await actRes.json();
     const row = activityToRide(activity, profile.id);
     if (!row) return Response.json({ ok: true, ignored: "non-cycling" });
@@ -54,7 +48,7 @@ export async function POST(request) {
     const { data: rideIns, error: upErr } = await admin
       .from("rides")
       .upsert([row], { onConflict: "user_id,strava_activity_id", ignoreDuplicates: false })
-      .select("id")
+      .select("id, minutes")
       .single();
     if (upErr) return Response.json({ ok: false, error: upErr.message }, { status: 500 });
 
@@ -64,29 +58,32 @@ export async function POST(request) {
       supabase: admin, userId: profile.id, activity, userTrails: [...(userTrails || [])],
     });
 
-    if (detection.trailIds.length > 0 && rideIns?.id) {
-      const links = detection.trailIds.map((tid) => ({ ride_id: rideIns.id, trail_id: tid }));
-      await admin.from("ride_trails")
-        .upsert(links, { onConflict: "ride_id,trail_id", ignoreDuplicates: true });
-      await admin.from("rides").update({ trail_id: detection.trailIds[0] }).eq("id", rideIns.id);
+    const totalPoints = detection.matches.reduce((a, m) => a + (m.points || 0), 0);
+    const totalSeconds = (row.minutes || 0) * 60;
 
-      if (detection.trailIds.length === 1) {
-        const t = userTrails?.find((x) => x.id === detection.trailIds[0]);
-        if (t) {
-          const newMin = row.minutes;
-          const newPR = !t.pr_minutes || newMin < t.pr_minutes ? newMin : t.pr_minutes;
-          await admin.from("trails")
-            .update({ pr_minutes: newPR, last_ride: row.date })
-            .eq("id", detection.trailIds[0]);
-        }
-      } else {
-        await admin.from("trails")
-          .update({ last_ride: row.date })
-          .in("id", detection.trailIds);
+    const links = detection.matches.map((m) => ({
+      ride_id: rideIns.id,
+      trail_id: m.trailId,
+      points_on_trail: m.points || null,
+      seconds_on_trail: totalPoints > 0 && m.points
+        ? Math.round((m.points / totalPoints) * totalSeconds)
+        : null,
+    }));
+
+    if (links.length > 0) {
+      await admin.from("ride_trails")
+        .upsert(links, { onConflict: "ride_id,trail_id", ignoreDuplicates: false });
+      const primary = detection.matches
+        .slice().sort((a, b) => (b.points || 0) - (a.points || 0))[0];
+      if (primary) {
+        await admin.from("rides").update({ trail_id: primary.trailId }).eq("id", rideIns.id);
       }
+      await admin.from("trails")
+        .update({ last_ride: row.date })
+        .in("id", detection.matches.map(m => m.trailId));
     }
 
-    return Response.json({ ok: true, inserted: true, linkedTrails: detection.trailIds.length, source: detection.source });
+    return Response.json({ ok: true, inserted: true, linkedTrails: links.length, source: detection.source });
   } catch (e) {
     return Response.json({ ok: false, error: e.message }, { status: 500 });
   }
