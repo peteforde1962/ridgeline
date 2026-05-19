@@ -1,11 +1,10 @@
-// /trails — rides-first. Recent rides table is clean (date/distance/elev/time/notes).
-// Click a row → /rides/[id] for per-trail breakdown.
+// /trails — rides-first. Log button → /rides/new. Trails-ridden as a word cloud.
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import LogRideForm from "@/components/LogRideForm";
 import DeleteRow from "@/components/DeleteRow";
 import StravaSyncResult from "@/components/StravaSyncResult";
+import TrailCloud from "@/components/TrailCloud";
 
 export default async function TrailsPage() {
   const supabase = createClient();
@@ -25,8 +24,8 @@ export default async function TrailsPage() {
   const totalElev  = (rides || []).reduce((a, r) => a + (+r.elev_m || 0), 0);
   const totalMin   = (rides || []).reduce((a, r) => a + (+r.minutes || 0), 0);
 
-  // Compute "trails you've ridden" with fastest time per trail (min seconds_on_trail).
-  const trailStats = {}; // trail_id -> { count, fastestSec }
+  // Compute trail stats: ride count + fastest seconds per trail.
+  const trailStats = {};
   (rides || []).forEach((r) => {
     (r.ride_trails || []).forEach((rt) => {
       const s = trailStats[rt.trail_id] || { count: 0, fastestSec: null };
@@ -58,7 +57,10 @@ export default async function TrailsPage() {
 
       <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
         <h1 className="text-3xl font-extrabold">Trails & Rides</h1>
-        <a href="/trails/discover" className="btn-ghost text-sm">🌍 Discover trails</a>
+        <div className="flex gap-2 flex-wrap">
+          <a href="/rides/new" className="btn-primary text-sm">+ Log a ride</a>
+          <a href="/trails/discover" className="btn-ghost text-sm">🌍 Discover trails</a>
+        </div>
       </div>
       <p className="text-[var(--muted)] mb-6">
         Strava rides import automatically and trails auto-populate via GPS. Click any ride for per-trail breakdown.
@@ -81,14 +83,22 @@ export default async function TrailsPage() {
         </div>
       </section>
 
-      <section className="mb-6">
-        <LogRideForm userId={user.id} trails={trails || []} />
-      </section>
+      {/* Trails ridden — word cloud */}
+      {riddenTrails.length > 0 && (
+        <section className="card mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold">Trails you've ridden</h2>
+            <span className="text-xs text-[var(--muted)]">size = how often you ride it</span>
+          </div>
+          <TrailCloud trails={riddenTrails} />
+        </section>
+      )}
 
+      {/* Recent rides */}
       <section className="card mb-6">
         <h2 className="text-lg font-bold mb-3">Recent rides</h2>
         {!rides || rides.length === 0 ? (
-          <p className="text-[var(--muted)] text-sm">No rides logged yet. Sync from Strava or use the form above.</p>
+          <p className="text-[var(--muted)] text-sm">No rides logged yet. Sync from Strava or tap "Log a ride".</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -108,9 +118,7 @@ export default async function TrailsPage() {
                   const trailCount = r.ride_trails?.length || 0;
                   return (
                     <tr key={r.id} className="border-t border-[var(--line)] hover:bg-[var(--panel2)] cursor-pointer">
-                      <td className="p-2 whitespace-nowrap">
-                        <a href={`/rides/${r.id}`} className="block">{r.date}</a>
-                      </td>
+                      <td className="p-2 whitespace-nowrap"><a href={`/rides/${r.id}`} className="block">{r.date}</a></td>
                       <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.km ? `${r.km} km` : "—"}</a></td>
                       <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.elev_m ? `${r.elev_m} m` : "—"}</a></td>
                       <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.minutes} min</a></td>
@@ -127,50 +135,6 @@ export default async function TrailsPage() {
           </div>
         )}
       </section>
-
-      <details className="card">
-        <summary className="cursor-pointer text-lg font-bold">
-          Trails you've ridden ({riddenTrails.length})
-        </summary>
-        <p className="text-xs text-[var(--muted)] mt-2 mb-3">
-          Auto-populated from your rides. Fastest time = shortest tracked time on the trail across all rides.
-        </p>
-        {riddenTrails.length === 0 ? (
-          <p className="text-[var(--muted)] text-sm">No trail-linked rides yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-[var(--muted)] text-xs uppercase tracking-wide">
-                  <th className="text-left p-2">Trail</th>
-                  <th className="text-left p-2">Length</th>
-                  <th className="text-left p-2">Difficulty</th>
-                  <th className="text-left p-2">Rides</th>
-                  <th className="text-left p-2">Fastest time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {riddenTrails.map((t) => (
-                  <tr key={t.id} className="border-t border-[var(--line)]">
-                    <td className="p-2 font-semibold">{t.name}</td>
-                    <td className="p-2">{t.length_km ? `${t.length_km} km` : "—"}</td>
-                    <td className="p-2"><span className="text-xs px-2 py-0.5 rounded bg-[var(--panel2)] border border-[var(--line)]">{t.difficulty}</span></td>
-                    <td className="p-2">{t.count}</td>
-                    <td className="p-2">{t.fastestSec != null ? `${formatTime(t.fastestSec)}` : <span className="text-[var(--muted)]">— (sync needed)</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </details>
     </main>
   );
-}
-
-function formatTime(seconds) {
-  if (seconds == null) return "—";
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
 }

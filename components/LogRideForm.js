@@ -1,18 +1,16 @@
 "use client";
 
-// Log a ride with multi-trail support. Trails can come from your saved list
-// OR you can search worldwide via OSM and import inline.
+// Log a ride form. Single smart trail search box that handles local AND worldwide trails.
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import GlobalTrailSearchModal from "@/components/GlobalTrailSearchModal";
 
-export default function LogRideForm({ userId, trails: initialTrails }) {
+export default function LogRideForm({ userId, trails: initialTrails, redirectAfterSave = "/trails" }) {
   const router = useRouter();
   const supabase = createClient();
 
-  // Local copy of trails so we can add newly-imported global trails without a refresh.
   const [trails, setTrails] = useState(initialTrails);
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
@@ -27,6 +25,16 @@ export default function LogRideForm({ userId, trails: initialTrails }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showGlobal, setShowGlobal] = useState(false);
+
+  // Live filter of local trails by the search query.
+  const filteredLocal = useMemo(() => {
+    if (!trailQuery) return trails;
+    const q = trailQuery.toLowerCase();
+    return trails.filter((t) => t.name.toLowerCase().includes(q));
+  }, [trails, trailQuery]);
+
+  // Trails the user has selected (chips at top of section).
+  const selectedTrails = trails.filter((t) => trailIds.has(t.id));
 
   function toggleTrail(id) {
     setTrailIds((s) => {
@@ -43,22 +51,17 @@ export default function LogRideForm({ userId, trails: initialTrails }) {
   }
 
   async function handleGlobalImported({ name }) {
-    // Re-fetch the user's trails so the newly imported one shows up.
     const { data: refreshed } = await supabase
       .from("trails").select("*").eq("user_id", userId).order("name");
     setTrails(refreshed || []);
-    // Auto-select the new trail (find by name).
     const newOne = (refreshed || []).find((t) => t.name === name);
     if (newOne) {
       setTrailIds((s) => new Set(s).add(newOne.id));
       if (!km && newOne.length_km) setKm(newOne.length_km);
       if (!elev && newOne.elev_m)  setElev(newOne.elev_m);
     }
+    setTrailQuery("");
   }
-
-  const filteredTrails = trailQuery
-    ? trails.filter((t) => t.name.toLowerCase().includes(trailQuery.toLowerCase()))
-    : trails;
 
   async function handleSave(e) {
     e.preventDefault();
@@ -91,9 +94,7 @@ export default function LogRideForm({ userId, trails: initialTrails }) {
       const rows = Array.from(trailIds).map((tid) => ({
         ride_id: insertedRows.id, trail_id: tid,
       }));
-      const { error: linkError } = await supabase.from("ride_trails").insert(rows);
-      if (linkError) console.warn("Ride saved but trail linking failed:", linkError.message);
-
+      await supabase.from("ride_trails").insert(rows);
       for (const tid of trailIds) {
         const t = trails.find((x) => x.id === tid);
         if (!t) continue;
@@ -107,23 +108,19 @@ export default function LogRideForm({ userId, trails: initialTrails }) {
 
     setBusy(false);
     setSuccess("Ride logged.");
-    setKm(""); setElev(""); setMinutes(""); setNotes(""); setFeel(3);
-    setTrailIds(new Set());
-    router.refresh();
+    setTimeout(() => router.push(redirectAfterSave), 600);
   }
 
   return (
     <>
       <form onSubmit={handleSave} className="card">
-        <h2 className="text-lg font-bold mb-3">Log a ride</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           <div>
             <label className="field-label">Date</label>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" />
           </div>
           <div>
-            <label className="field-label">Filter your trails</label>
+            <label className="field-label">Find a trail</label>
             <input
               value={trailQuery}
               onChange={(e) => setTrailQuery(e.target.value)}
@@ -133,44 +130,72 @@ export default function LogRideForm({ userId, trails: initialTrails }) {
           </div>
         </div>
 
+        {/* Selected chips */}
+        {selectedTrails.length > 0 && (
+          <div className="mb-3">
+            <div className="text-xs text-[var(--muted)] mb-1">Selected trails ({selectedTrails.length})</div>
+            <div className="flex flex-wrap gap-2">
+              {selectedTrails.map((t) => (
+                <button
+                  type="button"
+                  key={t.id}
+                  onClick={() => toggleTrail(t.id)}
+                  className="btn-primary"
+                  style={{ padding: "5px 12px", fontSize: 12 }}
+                >
+                  ✓ {t.name} ✕
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Filtered local trails */}
         <div className="mb-3 max-h-44 overflow-y-auto rounded-lg p-2"
              style={{ background: "var(--panel2)", border: "1px solid var(--line)" }}>
-          {filteredTrails.length === 0 ? (
-            <p className="text-xs text-[var(--muted)] p-2">
-              {trailQuery ? "No saved trails match — try the worldwide search below." : "No trails saved yet."}
-            </p>
+          {filteredLocal.length === 0 ? (
+            <div className="text-center p-3">
+              <p className="text-xs text-[var(--muted)] mb-2">
+                {trailQuery ? "No saved trail matches." : "No trails saved yet."}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowGlobal(true)}
+                className="btn-primary text-xs"
+                style={{ padding: "6px 14px" }}
+              >
+                🌍 Search worldwide{trailQuery ? ` for "${trailQuery}"` : ""}
+              </button>
+            </div>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {filteredTrails.map((t) => {
+              {filteredLocal.map((t) => {
                 const picked = trailIds.has(t.id);
+                if (picked) return null; // shown in chip strip above
                 return (
                   <button
                     type="button"
                     key={t.id}
                     onClick={() => toggleTrail(t.id)}
-                    className={picked ? "btn-primary" : "btn-ghost"}
+                    className="btn-ghost"
                     style={{ padding: "5px 10px", fontSize: 12 }}
                   >
-                    {picked && <span className="mr-1">✓</span>}{t.name}
+                    + {t.name}
                   </button>
                 );
               })}
+              {/* Also show worldwide button when results exist but user might want broader */}
+              {trailQuery && (
+                <button
+                  type="button"
+                  onClick={() => setShowGlobal(true)}
+                  className="text-xs text-[var(--accent3)] hover:underline px-2 py-1"
+                >
+                  🌍 Or search worldwide
+                </button>
+              )}
             </div>
           )}
-        </div>
-
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => setShowGlobal(true)}
-            className="btn-ghost text-sm"
-            style={{ padding: "8px 14px" }}
-          >
-            🌍 Search worldwide trails…
-          </button>
-          <p className="text-xs text-[var(--muted)] mt-1">
-            Trail you rode isn't saved yet? Find and import any trail in the world.
-          </p>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mb-3">
@@ -202,11 +227,14 @@ export default function LogRideForm({ userId, trails: initialTrails }) {
         </div>
 
         {error && <p className="text-[var(--red)] text-sm mb-3">⚠ {error}</p>}
-        {success && <p className="text-[var(--green)] text-sm mb-3">✓ {success}</p>}
+        {success && <p className="text-[var(--green)] text-sm mb-3">✓ {success} Redirecting…</p>}
 
-        <button type="submit" disabled={busy} className="btn-primary">
-          {busy ? "Saving…" : "Save ride"}
-        </button>
+        <div className="flex gap-2">
+          <button type="submit" disabled={busy} className="btn-primary">
+            {busy ? "Saving…" : "Save ride"}
+          </button>
+          <a href={redirectAfterSave} className="btn-ghost">Cancel</a>
+        </div>
       </form>
 
       <GlobalTrailSearchModal
