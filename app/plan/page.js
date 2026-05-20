@@ -1,4 +1,4 @@
-// /plan — full N-week plan with calendar dates, ✓/✗ icons, phase context.
+// /plan — full N-week plan grid with swap-aware tags, extras, and note indicators.
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -17,22 +17,36 @@ export default async function PlanPage() {
   const { data: profile } = await supabase
     .from("profiles").select("*").eq("id", user.id).single();
 
-  const { data: allSessions } = await supabase
-    .from("plan_sessions")
-    .select("week_index,day_index,session_idx,completed,tweak")
-    .eq("user_id", user.id);
+  const [{ data: allSessions }, { data: allNotes }] = await Promise.all([
+    supabase
+      .from("plan_sessions")
+      .select("week_index,day_index,session_idx,completed,tweak,swapped_to,is_extra,custom_name,custom_notes")
+      .eq("user_id", user.id),
+    supabase
+      .from("plan_day_notes")
+      .select("week_index, day_index")
+      .eq("user_id", user.id),
+  ]);
 
-  const sessionsByDay = {};
+  // Index template-session state by (week, day, session_idx) for the template
+  // sessions; index extras separately as arrays so each day knows its add-ons.
+  const sessionsByDay = {}; // "w-d" -> { sessionIdx: row } (template)
+  const extrasByDay = {};   // "w-d" -> [row, row]          (extras)
   for (const s of (allSessions || [])) {
     const key = `${s.week_index}-${s.day_index}`;
-    sessionsByDay[key] = sessionsByDay[key] || {};
-    sessionsByDay[key][s.session_idx] = s;
+    if (s.is_extra) {
+      extrasByDay[key] = extrasByDay[key] || [];
+      extrasByDay[key].push(s);
+    } else {
+      sessionsByDay[key] = sessionsByDay[key] || {};
+      sessionsByDay[key][s.session_idx] = s;
+    }
   }
+  const notesByDay = new Set((allNotes || []).map((n) => `${n.week_index}-${n.day_index}`));
 
   const plan = buildPlan(profile);
   const wIdx = currentWeekIndex(profile?.started_at, plan.length);
 
-  // Compute phase allocation summary so the user can see what their plan length means.
   const phaseSummary = PHASES.map((p) => ({
     ...p,
     actual: plan.filter((w) => w.phase === p.key).length,
@@ -46,6 +60,11 @@ export default async function PlanPage() {
         scheduled++;
         if (sessionsByDay[`${weekI}-${di}`]?.[si]?.completed) done++;
       });
+      // count extras too
+      (extrasByDay[`${weekI}-${di}`] || []).forEach((e) => {
+        scheduled++;
+        if (e.completed) done++;
+      });
     });
     return { scheduled, done, pct: scheduled ? Math.round(100 * done / scheduled) : 0 };
   }
@@ -56,10 +75,9 @@ export default async function PlanPage() {
       <h1 className="text-3xl font-extrabold mb-1">{plan.length}-Week Plan</h1>
       <p className="text-[var(--muted)] mb-5">
         Tap a session tag to cycle: <span className="text-[var(--text)]">○ pending → ✓ done → ✗ skipped</span>.
-        Click anywhere else on a day to drill into details.
+        Click a day to add workouts, notes, or change details. ✎ = day has notes.
       </p>
 
-      {/* Phase breakdown — explains exactly how the weeks are allocated */}
       <div className="grid grid-cols-5 gap-2 mb-6">
         {phaseSummary.map((p) => {
           const isCurrent = plan[wIdx]?.phase === p.key;
@@ -79,7 +97,6 @@ export default async function PlanPage() {
         })}
       </div>
 
-      {/* Legend */}
       <div className="flex flex-wrap gap-2 mb-5 text-xs">
         {["ride","strength","yoga","run","rope","rest"].map((t) => (
           <span key={t} className={`px-2 py-1 rounded ${sessionTagClass(t)}`}>
@@ -88,7 +105,6 @@ export default async function PlanPage() {
         ))}
       </div>
 
-      {/* Weeks */}
       <div className="space-y-4">
         {plan.map((w, i) => {
           const isCurrent = i === wIdx;
@@ -126,7 +142,6 @@ export default async function PlanPage() {
                 </div>
               </div>
 
-              {/* Progress bar */}
               <div className="h-1.5 rounded-full overflow-hidden mb-3" style={{ background: "var(--bg2)" }}>
                 <div
                   className="h-full transition-all"
@@ -148,6 +163,8 @@ export default async function PlanPage() {
                     dayIndex={di}
                     day={d}
                     storedMap={sessionsByDay[`${i}-${di}`]}
+                    extras={extrasByDay[`${i}-${di}`] || []}
+                    hasNote={notesByDay.has(`${i}-${di}`)}
                     dateLabel={formatShortDate(dateForDay(profile?.started_at, i, di))}
                   />
                 ))}

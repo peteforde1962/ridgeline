@@ -1,19 +1,21 @@
-// /plan/[w]/[d] — drill-in to any specific day in the plan.
-// Renders the same interactive SessionCard components used in /today, so users can
-// mark sessions done, change intensity, or swap, for any day of the plan.
+// /plan/[w]/[d] — full day editor: template sessions, extras, day notes.
 
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildPlan, DAY_NAMES, currentWeekIndex, todayDayIndex } from "@/lib/plan";
+import { buildPlan, DAY_NAMES, currentWeekIndex, todayDayIndex, sessionLabel } from "@/lib/plan";
 import SessionCard from "@/components/SessionCard";
 import PageHeader from "@/components/PageHeader";
+import DayNotesEditor from "@/components/DayNotesEditor";
+import AddExtraSessionForm from "@/components/AddExtraSessionForm";
+import DeleteRow from "@/components/DeleteRow";
 
 export default async function PlanDayPage({ params }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("profiles").select("*").eq("id", user.id).single();
 
   const plan = buildPlan(profile);
   const wIdx = Number(params.w);
@@ -25,15 +27,26 @@ export default async function PlanDayPage({ params }) {
   const week = plan[wIdx];
   const day = week.days[dIdx];
 
-  const { data: storedSessions } = await supabase
-    .from("plan_sessions").select("*")
-    .eq("user_id", user.id)
-    .eq("week_index", wIdx)
-    .eq("day_index", dIdx);
+  const [{ data: storedSessions }, { data: noteRow }] = await Promise.all([
+    supabase.from("plan_sessions")
+      .select("id,session_idx,completed,tweak,swapped_to,is_extra,custom_name,custom_notes")
+      .eq("user_id", user.id).eq("week_index", wIdx).eq("day_index", dIdx),
+    supabase.from("plan_day_notes")
+      .select("note").eq("user_id", user.id).eq("week_index", wIdx).eq("day_index", dIdx).maybeSingle(),
+  ]);
+
+  const extras = (storedSessions || []).filter(s => s.is_extra).sort((a, b) => a.session_idx - b.session_idx);
+  const templateState = (storedSessions || []).reduce((acc, s) => {
+    if (!s.is_extra) acc[s.session_idx] = s;
+    return acc;
+  }, {});
+
+  // Next session_idx for new extras = max + 1, with template count as floor.
+  const allIdx = (storedSessions || []).map(s => s.session_idx);
+  const nextSessionIdx = Math.max(day.details.length - 1, ...(allIdx.length ? allIdx : [-1])) + 1;
 
   const isToday = wIdx === currentWeekIndex(profile?.started_at, plan.length) && dIdx === todayDayIndex();
 
-  // Prev / Next day navigation
   const prevW = dIdx === 0 ? wIdx - 1 : wIdx;
   const prevD = dIdx === 0 ? 6 : dIdx - 1;
   const nextW = dIdx === 6 ? wIdx + 1 : wIdx;
@@ -55,18 +68,23 @@ export default async function PlanDayPage({ params }) {
       </h1>
       <p className="text-[var(--muted)] mb-6">{week.phaseName} phase</p>
 
+      {/* Day notes */}
+      <DayNotesEditor
+        userId={user.id} weekIndex={wIdx} dayIndex={dIdx}
+        initialNote={noteRow?.note || ""}
+      />
+
+      {/* Template sessions */}
       {day.details.length === 0 ? (
-        <div className="card text-center">
-          <p>Rest day. Hydrate, sleep, foam-roll.</p>
+        <div className="card text-center mb-3">
+          <p>Scheduled as a rest day. You can add any workout below.</p>
         </div>
       ) : (
         day.details.map((session, i) => {
-          const stored = storedSessions?.find(
-            (s) => s.week_index === wIdx && s.day_index === dIdx && s.session_idx === i
-          );
+          const stored = templateState[i];
           return (
             <SessionCard
-              key={i}
+              key={`t-${i}`}
               userId={user.id}
               weekIndex={wIdx}
               dayIndex={dIdx}
@@ -77,6 +95,40 @@ export default async function PlanDayPage({ params }) {
           );
         })
       )}
+
+      {/* Extras */}
+      {extras.map((e) => {
+        const synthSession = {
+          type: e.swapped_to || "ride",
+          name: e.custom_name || `Extra ${sessionLabel(e.swapped_to || "ride")}`,
+          notes: e.custom_notes || "User-added workout",
+        };
+        return (
+          <div key={`e-${e.session_idx}`} className="relative">
+            <SessionCard
+              userId={user.id}
+              weekIndex={wIdx}
+              dayIndex={dIdx}
+              sessionIdx={e.session_idx}
+              session={synthSession}
+              stored={e}
+            />
+            <div className="flex justify-end -mt-2 mb-3">
+              <DeleteRow table="plan_sessions" id={e.id} label="Remove this workout" confirm={`Remove "${synthSession.name}"?`} />
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Add extra */}
+      <div className="mb-4">
+        <AddExtraSessionForm
+          userId={user.id}
+          weekIndex={wIdx}
+          dayIndex={dIdx}
+          nextSessionIdx={nextSessionIdx}
+        />
+      </div>
 
       <nav className="flex justify-between mt-6">
         {hasPrev ? (
