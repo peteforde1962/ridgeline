@@ -1,5 +1,7 @@
 // /today — what's on the docket today?
 
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buildPlan, currentWeekIndex, todayDayIndex, readinessFromCheckin } from "@/lib/plan";

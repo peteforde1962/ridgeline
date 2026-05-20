@@ -1,5 +1,8 @@
 // /trails — rides-first. Log button → /rides/new. Trails-ridden as a word cloud.
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DeleteRow from "@/components/DeleteRow";

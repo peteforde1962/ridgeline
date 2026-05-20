@@ -7,17 +7,17 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // RidgeLine light palette
-        cream:  "#f6f4e7",
-        teal:   "#0f95b0",
-        orange: "#f26838",
-        bg:     "#f6f4e7",
-        bg2:    "#fbfaf2",
-        panel:  "#ffffff",
-        panel2: "#faf8eb",
-        line:   "#e2dcc4",
-        text:   "#1d2a30",
-        muted:  "#6c7a82",
+        // RidgeLine dark teal + peach palette
+        teal:   "#134857",
+        char:   "#262a2b",
+        peach:  "#f8b6a6",
+        bg:     "#134857",
+        bg2:    "#0e3a47",
+        panel:  "#262a2b",
+        panel2: "#2f3334",
+        line:   "#2d5c6c",
+        text:   "#f4eee4",
+        muted:  "#a7bcc4",
       },
       fontFamily: {
         sans: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"],

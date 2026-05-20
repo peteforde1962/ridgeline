@@ -1,20 +1,21 @@
-// Dashboard — Grafana-style data view.
-// Hero header + today's status, then KPI snapshot, this-week chart, top trails,
-// recent activity timeline.
+// Dashboard — disable caching so totals/charts always reflect latest data.
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buildPlan, currentWeekIndex, todayDayIndex } from "@/lib/plan";
 import SignOutButton from "@/components/SignOutButton";
+import Icon from "@/lib/icons";
 
 export default async function DashboardPage() {
   const supabase = createClient();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const today = new Date().toISOString().slice(0, 10);
-  const sevenDaysAgo = new Date(Date.now() - 7 * 86400_000).toISOString().slice(0, 10);
+  const sevenDaysAgo  = new Date(Date.now() - 7 * 86400_000).toISOString().slice(0, 10);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
 
   const [
@@ -28,8 +29,8 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("check_ins").select("*").eq("user_id", user.id).eq("date", today).maybeSingle(),
-    supabase.from("rides").select("*, trails(name)").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: false }),
-    supabase.from("rides").select("trail_id, trails(name), km, minutes, elev_m, date").eq("user_id", user.id).gte("date", thirtyDaysAgo),
+    supabase.from("rides").select("id, date, km, elev_m, minutes, notes, ride_trails(trails(name))").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: false }),
+    supabase.from("rides").select("km, minutes, elev_m, date, ride_trails(trails(name))").eq("user_id", user.id).gte("date", thirtyDaysAgo),
     supabase.from("rides").select("date, km").eq("user_id", user.id),
     supabase.from("plan_sessions").select("week_index, day_index, session_idx, completed").eq("user_id", user.id),
     supabase.from("check_ins").select("date, sleep, soreness, energy").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: true }),
@@ -40,7 +41,6 @@ export default async function DashboardPage() {
     !profile ||
     (profile.name === user.email?.split("@")[0] && profile.preset === "Sport" && profile.weekly_hours === 6);
 
-  // -------- Plan stats --------
   const plan = buildPlan(profile);
   const wIdx = currentWeekIndex(profile?.started_at, plan.length);
   const dIdx = todayDayIndex();
@@ -55,25 +55,26 @@ export default async function DashboardPage() {
   const overallDone = (planSessions || []).filter(s => s.completed).length;
   const totalScheduled = plan.reduce((a, w) => a + w.days.reduce((b, d) => b + d.details.filter(s => s.type !== "rest").length, 0), 0);
 
-  // -------- Week KPIs --------
   const kmThisWeek    = (weekRides || []).reduce((a, r) => a + (+r.km || 0), 0);
   const elevThisWeek  = (weekRides || []).reduce((a, r) => a + (+r.elev_m || 0), 0);
   const minThisWeek   = (weekRides || []).reduce((a, r) => a + (+r.minutes || 0), 0);
   const ridesThisWeek = (weekRides || []).length;
 
-  // -------- Top trails (last 30d) --------
+  // Top trails — group monthRides by trail name (from ride_trails join).
   const trailMinutes = {};
   const trailRides   = {};
   (monthRides || []).forEach((r) => {
-    if (!r.trails?.name) return;
-    trailMinutes[r.trails.name] = (trailMinutes[r.trails.name] || 0) + (+r.minutes || 0);
-    trailRides[r.trails.name]   = (trailRides[r.trails.name] || 0) + 1;
+    (r.ride_trails || []).forEach((rt) => {
+      const name = rt.trails?.name;
+      if (!name) return;
+      trailMinutes[name] = (trailMinutes[name] || 0) + (+r.minutes || 0) / (r.ride_trails.length || 1);
+      trailRides[name]   = (trailRides[name] || 0) + 1;
+    });
   });
   const topTrails = Object.keys(trailMinutes)
     .map((name) => ({ name, minutes: trailMinutes[name], rides: trailRides[name] }))
     .sort((a, b) => b.minutes - a.minutes).slice(0, 5);
 
-  // -------- 7-day activity chart (km per day) --------
   const last7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
@@ -85,7 +86,6 @@ export default async function DashboardPage() {
   }));
   const maxKm = Math.max(1, ...kmByDay.map(d => d.km));
 
-  // -------- Readiness line (7-day) --------
   const readinessByDay = last7.map((dateStr) => {
     const c = (weekCheckins || []).find(c => c.date === dateStr);
     return c ? (c.sleep + c.energy - c.soreness) : null;
@@ -105,36 +105,34 @@ export default async function DashboardPage() {
         <div className="ml-auto"><SignOutButton /></div>
       </header>
 
-      {/* Hero — name + today's status */}
       <section className="card mb-4">
         <div className="flex justify-between items-start gap-4 flex-wrap">
           <div>
             <h1 className="text-3xl font-extrabold mb-1">Hey, {displayName}</h1>
             <p className="text-[var(--muted)]">
               Week {week?.week ?? "—"} of {plan.length} · {week?.phaseName ?? "—"} phase ·
-              {todayIsRest ? " 🛌 today is a rest day"
-                : ` 🎯 today: ${todaySessions.map(s => s.name.split("(")[0].trim()).join(", ")}`}
+              {todayIsRest ? " rest day"
+                : ` today: ${todaySessions.map(s => s.name.split("(")[0].trim()).join(", ")}`}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <a href="/today" className="btn-primary text-sm">Today's workout →</a>
-            <a href="/checkin" className="btn-ghost text-sm">💚 Check-in</a>
-            <a href="/coach" className="btn-ghost text-sm">🤖 Coach AI</a>
+            <a href="/today" className="btn-primary text-sm"><Icon name="target" size={16} stroke="#1a2a30" /> Today's workout</a>
+            <a href="/checkin" className="btn-ghost text-sm"><Icon name="heart" size={16} /> Check-in</a>
+            <a href="/coach" className="btn-ghost text-sm"><Icon name="bolt" size={16} /> Coach AI</a>
           </div>
         </div>
       </section>
 
       {needsSetup && (
         <section className="card mb-4" style={{ borderColor: "var(--accent)" }}>
-          <h2 className="text-lg font-bold mb-1">👋 Finish setting up your plan</h2>
+          <h2 className="text-lg font-bold mb-1">Finish setting up your plan</h2>
           <p className="text-sm text-[var(--muted)] mb-3">
             Tell us about your riding so we can tailor the workouts.
           </p>
-          <a href="/profile" className="btn-primary">Set up my profile</a>
+          <a href="/profile" className="btn-primary"><Icon name="cog" size={16} stroke="#1a2a30" /> Set up my profile</a>
         </section>
       )}
 
-      {/* KPI strip */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Kpi label="This week sessions"
              v={`${completedThisWeek}/${scheduledThisWeek}`}
@@ -147,13 +145,12 @@ export default async function DashboardPage() {
         <Kpi label="Climbing (7d)" v={`${elevThisWeek.toLocaleString()} m`} sub={`${Math.round(minThisWeek / 60)} hr saddle`} />
       </section>
 
-      {/* Two-column: chart + readiness */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        {/* Chart: km per day, last 7 */}
+        {/* Distance bar chart */}
         <div className="card">
           <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Distance · last 7 days</h2>
           <div className="flex items-end gap-2 h-32">
-            {kmByDay.map((d, i) => {
+            {kmByDay.map((d) => {
               const h = d.km > 0 ? Math.max(4, (d.km / maxKm) * 100) : 2;
               const label = new Date(d.date).toLocaleDateString(undefined, { weekday: "short" });
               return (
@@ -163,7 +160,7 @@ export default async function DashboardPage() {
                     className="w-full rounded-t"
                     style={{
                       height: `${h}%`,
-                      background: d.km > 0 ? "linear-gradient(180deg, var(--accent), var(--accent2,#d35a40))" : "var(--bg2)",
+                      background: d.km > 0 ? "linear-gradient(180deg, var(--accent), var(--accent2,#fccabb))" : "var(--bg2)",
                     }}
                   />
                   <div className="text-[10px] text-[var(--muted)]">{label}</div>
@@ -173,33 +170,14 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Readiness sparkline */}
+        {/* Readiness — line + points */}
         <div className="card">
           <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Readiness · last 7 days</h2>
-          <div className="flex items-end gap-2 h-32">
-            {readinessByDay.map((r, i) => {
-              const v = r ?? 0;
-              const max = 20;
-              const h = r != null ? Math.max(6, (v / max) * 100) : 2;
-              const label = new Date(last7[i]).toLocaleDateString(undefined, { weekday: "short" });
-              const color = r == null ? "var(--bg2)"
-                : v <= 3 ? "#d76a4a"
-                : v >= 8 ? "#6a8a6d"
-                : "#e6e5e3";
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1" title={r == null ? "no check-in" : `score ${v}`}>
-                  <div className="text-[10px] text-[var(--muted)]">{r != null ? v : ""}</div>
-                  <div className="w-full rounded-t" style={{ height: `${h}%`, background: color }} />
-                  <div className="text-[10px] text-[var(--muted)]">{label}</div>
-                </div>
-              );
-            })}
-          </div>
+          <ReadinessLine last7={last7} readinessByDay={readinessByDay} />
           <p className="text-[10px] text-[var(--muted)] mt-2">sleep + energy − soreness</p>
         </div>
       </section>
 
-      {/* Today's check-in (if any) */}
       {todayCheckin && (
         <section className="card mb-4">
           <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Today's check-in</h2>
@@ -214,7 +192,6 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* Two columns: top trails + recent rides */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div className="card">
           <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Top trails · last 30d</h2>
@@ -232,7 +209,7 @@ export default async function DashboardPage() {
                       <span className="text-[var(--muted)]">{t.rides} ride{t.rides === 1 ? "" : "s"} · {Math.round(t.minutes / 60)}h</span>
                     </div>
                     <div className="h-1.5 rounded-full" style={{ background: "var(--bg2)" }}>
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--accent), var(--accent2,#d35a40))" }} />
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--accent), var(--accent2,#fccabb))" }} />
                     </div>
                   </li>
                 );
@@ -247,15 +224,18 @@ export default async function DashboardPage() {
             <p className="text-sm text-[var(--muted)]">No rides in the last 7 days.</p>
           ) : (
             <ul className="space-y-2">
-              {weekRides.slice(0, 5).map((r) => (
-                <li key={r.id} className="flex justify-between text-sm">
-                  <span>
-                    <span className="text-[var(--muted)] mr-2">{r.date.slice(5)}</span>
-                    <span className="font-semibold">{r.trails?.name || r.notes?.split("·")[0] || "Untitled"}</span>
-                  </span>
-                  <span className="text-[var(--muted)]">{r.km}km · {r.minutes}min · {r.elev_m || 0}m</span>
-                </li>
-              ))}
+              {weekRides.slice(0, 5).map((r) => {
+                const trailName = r.ride_trails?.[0]?.trails?.name || r.notes?.split("·")[0]?.trim() || "Ride";
+                return (
+                  <li key={r.id} className="flex justify-between text-sm">
+                    <span>
+                      <span className="text-[var(--muted)] mr-2">{r.date.slice(5)}</span>
+                      <span className="font-semibold">{trailName}</span>
+                    </span>
+                    <span className="text-[var(--muted)]">{r.km}km · {r.minutes}min · {r.elev_m || 0}m</span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -275,7 +255,7 @@ function Kpi({ label, v, sub, pct, accent }) {
             width: `${Math.min(100, pct)}%`,
             background: pct >= 100
               ? "linear-gradient(90deg, var(--green), #95b890)"
-              : "linear-gradient(90deg, var(--accent), var(--accent2,#d35a40))",
+              : "linear-gradient(90deg, var(--accent), var(--accent2,#fccabb))",
           }} />
         </div>
       )}
@@ -286,12 +266,59 @@ function Kpi({ label, v, sub, pct, accent }) {
 
 function MiniMetric({ label, v, invert }) {
   const tone = invert
-    ? (v <= 3 ? "#8fb287" : v >= 8 ? "#d76a4a" : "#e6e5e3")
-    : (v >= 8 ? "#8fb287" : v <= 3 ? "#d76a4a" : "#e6e5e3");
+    ? (v <= 3 ? "#5cb85c" : v >= 8 ? "#d9534f" : "var(--text)")
+    : (v >= 8 ? "#5cb85c" : v <= 3 ? "#d9534f" : "var(--text)");
   return (
     <div>
       <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
       <div className="text-2xl font-extrabold" style={{ color: tone }}>{v}<span className="text-sm text-[var(--muted)]">/10</span></div>
     </div>
+  );
+}
+
+// SVG line + point chart for readiness.
+function ReadinessLine({ last7, readinessByDay }) {
+  const W = 320, H = 110, padX = 20, padY = 14;
+  const max = 20, min = -10;
+  function y(v) { return padY + ((max - v) / (max - min)) * (H - 2 * padY); }
+  function x(i) { return padX + (i / 6) * (W - 2 * padX); }
+
+  // Build path between consecutive non-null points.
+  const segments = [];
+  let lastIdx = -1;
+  for (let i = 0; i < 7; i++) {
+    const v = readinessByDay[i];
+    if (v == null) continue;
+    if (lastIdx >= 0) segments.push([lastIdx, i]);
+    lastIdx = i;
+  }
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H + 20}`} width="100%" preserveAspectRatio="xMidYMid meet">
+      {/* axis line */}
+      <line x1={padX} y1={H - padY} x2={W - padX} y2={H - padY} stroke="var(--line)" />
+      {/* segments */}
+      {segments.map(([a, b], i) => (
+        <line key={i}
+              x1={x(a)} y1={y(readinessByDay[a])}
+              x2={x(b)} y2={y(readinessByDay[b])}
+              stroke="var(--accent)" strokeWidth="2" />
+      ))}
+      {/* points */}
+      {readinessByDay.map((v, i) => v == null ? null : (
+        <g key={i}>
+          <circle cx={x(i)} cy={y(v)} r="4"
+                  fill={v <= 3 ? "#d9534f" : v >= 8 ? "#5cb85c" : "var(--accent)"}
+                  stroke="var(--panel)" strokeWidth="2" />
+          <text x={x(i)} y={y(v) - 9} textAnchor="middle" fontSize="10" fill="var(--muted)">{v}</text>
+        </g>
+      ))}
+      {/* day labels */}
+      {last7.map((d, i) => (
+        <text key={i} x={x(i)} y={H + 10} textAnchor="middle" fontSize="10" fill="var(--muted)">
+          {new Date(d).toLocaleDateString(undefined, { weekday: "short" })}
+        </text>
+      ))}
+    </svg>
   );
 }

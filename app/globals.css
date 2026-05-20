@@ -3,51 +3,49 @@
 @tailwind utilities;
 
 /*
-  RidgeLine palette — light & modern:
-    #F6F4E7  cream (background)
-    #0F95B0  teal (secondary accent, highlights)
-    #F26838  vibrant orange (primary action)
+  RidgeLine palette — dark teal + peach:
+    #134857  deep teal (page background)
+    #262A2B  charcoal (raised panels)
+    #F8B6A6  warm peach (primary accent)
 */
 
 :root {
-  --bg:      #f6f4e7;   /* warm cream background */
-  --bg2:     #fbfaf2;   /* slightly lighter section bg */
-  --panel:   #ffffff;   /* card surfaces are white */
-  --panel2:  #faf8eb;   /* subtle raised surface */
-  --line:    #e2dcc4;   /* cream-tan border */
-  --text:    #1d2a30;   /* dark teal-tinted body text */
-  --muted:   #6c7a82;   /* cool gray-blue */
+  --bg:      #134857;   /* deep teal background */
+  --bg2:     #0e3a47;   /* darker teal for inset sections */
+  --panel:   #262a2b;   /* charcoal card surface */
+  --panel2:  #2f3334;   /* raised card surface */
+  --line:    #2d5c6c;   /* medium teal-gray border */
+  --text:    #f4eee4;   /* warm off-white */
+  --muted:   #a7bcc4;   /* dusty teal-gray */
 
-  --accent:  #f26838;   /* vibrant orange — primary action */
-  --accent2: #ff8050;   /* lighter orange for hover */
-  --accent3: #0f95b0;   /* teal — secondary accent */
+  --accent:  #f8b6a6;   /* peach — primary action */
+  --accent2: #fccabb;   /* lighter peach for hover */
+  --accent3: #f8b6a6;
 
-  --teal:    #0f95b0;
-  --orange:  #f26838;
-  --green:   #4fa05f;   /* clean success green */
-  --red:     #d04e2c;   /* warm error red */
-  --blue:    #0f95b0;   /* teal aliased */
+  /* Traffic light + semantic */
+  --green:   #5cb85c;
+  --amber:   #f0ad4e;
+  --red:     #d9534f;
+  --blue:    #5fa7c4;
 }
 
 html, body {
   height: 100%;
   background:
-    radial-gradient(1400px 700px at 80% -10%, #fffcec 0%, var(--bg) 60%) fixed;
+    radial-gradient(1400px 700px at 70% -10%, #1a5c70 0%, var(--bg) 60%) fixed;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Brand mark */
 .logo-mark {
   width: 32px; height: 32px; border-radius: 9px;
-  background: linear-gradient(135deg, var(--accent), #c84818);
+  background: linear-gradient(135deg, var(--accent), #d68070);
   display: grid; place-items: center;
-  box-shadow: 0 4px 14px rgba(242, 104, 56, 0.35);
+  box-shadow: 0 4px 14px rgba(248, 182, 166, 0.30);
 }
-.logo-mark svg { stroke: #fff; }
+.logo-mark svg { stroke: #262a2b; }
 
-/* Form controls */
 .field-label {
   font-size: 12px; color: var(--muted);
   font-weight: 600; margin-bottom: 6px; display: block;
@@ -55,7 +53,7 @@ html, body {
 }
 .input {
   width: 100%;
-  background: #ffffff;
+  background: rgba(0, 0, 0, 0.25);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -65,10 +63,9 @@ html, body {
 }
 .input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-/* Buttons */
 .btn-primary {
   background: var(--accent);
-  color: #ffffff;
+  color: #1a2a30;
   border: 0;
   padding: 12px 20px;
   border-radius: 10px;
@@ -78,14 +75,14 @@ html, body {
   display: inline-flex; align-items: center; gap: 8px;
   min-height: 44px;
   transition: background 0.15s ease, transform 0.05s ease;
-  box-shadow: 0 2px 8px rgba(242, 104, 56, 0.25);
+  box-shadow: 0 2px 10px rgba(248, 182, 166, 0.22);
 }
 .btn-primary:hover  { background: var(--accent2); }
 .btn-primary:active { transform: translateY(1px); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
 .btn-ghost {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text);
   border: 1px solid var(--line);
   padding: 12px 20px;
@@ -96,28 +93,24 @@ html, body {
   display: inline-flex; align-items: center; gap: 8px;
   min-height: 44px;
 }
-.btn-ghost:hover { background: var(--panel2); border-color: var(--accent3); }
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.07); border-color: var(--accent); }
 
-/* Cards */
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 18px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
-/* Range sliders */
 input[type="range"] {
   accent-color: var(--accent);
   height: 24px;
 }
 
-/* Tables */
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 10px 8px; }
 
-/* Mobile */
 @media (max-width: 640px) {
   .card { padding: 14px; border-radius: 12px; }
   main { padding-bottom: 92px !important; }
@@ -126,17 +119,16 @@ th, td { padding: 10px 8px; }
   .btn-primary, .btn-ghost { padding: 10px 14px; font-size: 13px; }
 }
 
-/* Desktop sidebar */
 .sb {
   position: fixed; top: 0; bottom: 0; left: 0;
   width: 220px;
-  background: rgba(255, 253, 244, 0.97);
+  background: rgba(38, 42, 43, 0.97);
   border-right: 1px solid var(--line);
   display: none;
   flex-direction: column;
   padding: 18px 12px;
   z-index: 40;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
 }
 .sb-row {
   display: flex; align-items: center; gap: 12px;
@@ -148,7 +140,7 @@ th, td { padding: 10px 8px; }
   cursor: pointer;
   transition: background 0.1s ease;
 }
-.sb-row:hover { background: rgba(15, 149, 176, 0.08); color: var(--text); }
+.sb-row:hover { background: rgba(248, 182, 166, 0.10); color: var(--text); }
 .sb-section {
   font-size: 11px; font-weight: 700;
   color: var(--muted);
@@ -161,13 +153,12 @@ th, td { padding: 10px 8px; }
   body { padding-left: 220px; }
 }
 
-/* Bottom tab bar */
 .tabbar {
   position: fixed;
   left: 0; right: 0; bottom: 0;
   display: none;
   z-index: 50;
-  background: rgba(255, 253, 244, 0.97);
+  background: rgba(38, 42, 43, 0.97);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-top: 1px solid var(--line);
@@ -187,7 +178,7 @@ th, td { padding: 10px 8px; }
 }
 .tabbar a.active {
   color: var(--accent);
-  background: rgba(242, 104, 56, 0.12);
+  background: rgba(248, 182, 166, 0.15);
 }
 .tabbar a .ico { font-size: 18px; line-height: 1; }
 @media (max-width: 768px) {

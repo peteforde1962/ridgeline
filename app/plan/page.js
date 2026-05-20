@@ -166,6 +166,7 @@ export default async function PlanPage() {
                     extras={extrasByDay[`${i}-${di}`] || []}
                     hasNote={notesByDay.has(`${i}-${di}`)}
                     dateLabel={formatShortDate(dateForDay(profile?.started_at, i, di))}
+                    startedAt={profile?.started_at}
                   />
                 ))}
               </div>
