@@ -8,20 +8,33 @@ import { createClient } from "@/lib/supabase/server";
 import DeleteRow from "@/components/DeleteRow";
 import StravaSyncResult from "@/components/StravaSyncResult";
 import TrailCloud from "@/components/TrailCloud";
+import ConditionBadge from "@/components/ConditionBadge";
+import AddConditionForm from "@/components/AddConditionForm";
 
 export default async function TrailsPage() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: trails }, { data: rides }] = await Promise.all([
+  const [{ data: trails }, { data: rides }, { data: conditionsAll }] = await Promise.all([
     supabase.from("trails").select("*").eq("user_id", user.id).order("name"),
     supabase
       .from("rides")
       .select("id, date, km, elev_m, minutes, notes, ride_trails(trail_id, seconds_on_trail)")
       .eq("user_id", user.id)
       .order("date", { ascending: false }).limit(25),
+    // Latest 50 condition reports (community-wide).
+    supabase.from("trail_conditions")
+      .select("trail_name, region, status, notes, reporter_name, reported_at")
+      .order("reported_at", { ascending: false }).limit(50),
   ]);
+
+  // Map: lowercase trail name → latest condition report
+  const latestByTrail = {};
+  for (const c of (conditionsAll || [])) {
+    const k = c.trail_name.toLowerCase();
+    if (!latestByTrail[k]) latestByTrail[k] = c;
+  }
 
   const totalKm    = (rides || []).reduce((a, r) => a + (+r.km || 0), 0);
   const totalElev  = (rides || []).reduce((a, r) => a + (+r.elev_m || 0), 0);
@@ -41,7 +54,11 @@ export default async function TrailsPage() {
   });
   const riddenTrails = (trails || [])
     .filter((t) => trailStats[t.id])
-    .map((t) => ({ ...t, ...trailStats[t.id] }))
+    .map((t) => {
+      const cond = latestByTrail[t.name.toLowerCase()];
+      const daysAgo = cond ? Math.floor((Date.now() - new Date(cond.reported_at).getTime()) / 86400_000) : null;
+      return { ...t, ...trailStats[t.id], condition: cond ? { ...cond, daysAgo } : null };
+    })
     .sort((a, b) => b.count - a.count);
 
   return (
@@ -94,6 +111,37 @@ export default async function TrailsPage() {
             <span className="text-xs text-[var(--muted)]">size = how often you ride it</span>
           </div>
           <TrailCloud trails={riddenTrails} />
+        </section>
+      )}
+
+      {/* Conditions feed */}
+      {riddenTrails.length > 0 && (
+        <section className="card mb-6">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h2 className="text-lg font-bold">Trail conditions</h2>
+            <span className="text-xs text-[var(--muted)]">Community reports — most recent per trail</span>
+          </div>
+          <div className="space-y-2">
+            {riddenTrails.slice(0, 10).map((t) => (
+              <div key={t.id} className="flex flex-wrap items-center gap-3 py-2 border-b border-[var(--line)] last:border-0">
+                <div className="flex-1 min-w-[160px]">
+                  <div className="font-semibold">{t.name}</div>
+                  {t.condition ? (
+                    <div className="text-xs text-[var(--muted)] mt-0.5">
+                      {t.condition.notes && <span>"{t.condition.notes}" — </span>}
+                      <span>{t.condition.reporter_name || "anon"} · {t.condition.daysAgo}d ago</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-[var(--muted)] mt-0.5">No reports yet</div>
+                  )}
+                </div>
+                {t.condition && (
+                  <ConditionBadge status={t.condition.status} daysAgo={t.condition.daysAgo} title={t.condition.notes} />
+                )}
+                <AddConditionForm trailName={t.name} region={t.region} />
+              </div>
+            ))}
+          </div>
         </section>
       )}
 

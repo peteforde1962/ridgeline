@@ -6,6 +6,7 @@ export const revalidate = 0;
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buildPlan, currentWeekIndex, todayDayIndex } from "@/lib/plan";
+import { recoveryRecommendation } from "@/lib/recovery";
 import SignOutButton from "@/components/SignOutButton";
 import Icon from "@/lib/icons";
 
@@ -91,6 +92,8 @@ export default async function DashboardPage() {
     return c ? (c.sleep + c.energy - c.soreness) : null;
   });
 
+  const recovery = recoveryRecommendation({ rides: weekRides, todayCheckin });
+
   return (
     <main className="min-h-screen p-6 max-w-6xl mx-auto">
       <header className="flex items-center justify-between mb-6">
@@ -175,6 +178,28 @@ export default async function DashboardPage() {
           <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Readiness · last 7 days</h2>
           <ReadinessLine last7={last7} readinessByDay={readinessByDay} />
           <p className="text-[10px] text-[var(--muted)] mt-2">sleep + energy − soreness</p>
+        </div>
+      </section>
+
+      {/* Recovery status */}
+      <section className="card mb-4" style={{ borderLeft: `4px solid ${recovery.color}` }}>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-1">Recovery status</h2>
+            <p className="font-bold" style={{ color: recovery.color }}>
+              {recovery.status === "ready" ? "✓ Ready for a hard effort"
+               : recovery.status === "almost" ? "⏳ Take it easy today"
+               : "🛑 Recovering — easy or rest"}
+            </p>
+            <p className="text-sm text-[var(--muted)] mt-1">{recovery.label}</p>
+          </div>
+          {recovery.hardest && (
+            <div className="text-xs text-[var(--muted)] text-right">
+              <div>Hardest recent ride:</div>
+              <div className="text-[var(--text)] font-semibold">{recovery.hardest.intensity}</div>
+              <div>{recovery.hardest.km || "?"}km · {recovery.hardest.elev_m || "?"}m · {recovery.hardest.minutes}min</div>
+            </div>
+          )}
         </div>
       </section>
 
