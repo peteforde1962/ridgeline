@@ -31,9 +31,10 @@ export default async function TodayPage() {
   const week = plan[wIdx];
   const day = week.days[dIdx];
 
-  // Pull persisted state for today's sessions.
+  // Pull persisted state for today's sessions (including ride_id + ai_workout).
   const { data: storedSessions } = await supabase
-    .from("plan_sessions").select("*")
+    .from("plan_sessions")
+    .select("id,session_idx,completed,tweak,swapped_to,is_extra,custom_name,custom_notes,ride_id,ai_workout")
     .eq("user_id", user.id)
     .eq("week_index", wIdx)
     .eq("day_index", dIdx);
@@ -80,41 +81,6 @@ export default async function TodayPage() {
           <span className="text-[var(--muted)]">No check-in today. </span>
           <a href="/checkin" className="text-[var(--accent2,#f4b860)] font-semibold">Log one to auto-tune intensity →</a>
         </div>
-      )}
-
-      {/* Actual rides today */}
-      {(dayRides || []).length > 0 && (
-        <section className="card mb-4">
-          <h2 className="text-lg font-bold mb-3">Recorded rides today ({dayRides.length})</h2>
-          <div className="space-y-2">
-            {dayRides.map((r) => {
-              const trailNames = (r.ride_trails || []).map(rt => rt.trails?.name).filter(Boolean);
-              return (
-                <a
-                  key={r.id}
-                  href={`/rides/${r.id}`}
-                  className="flex items-center justify-between p-3 rounded-lg border transition hover:border-[var(--accent)]"
-                  style={{ background: "var(--panel2)", borderColor: "var(--line)" }}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs px-2 py-0.5 rounded bg-[#f8b6a6]/20 text-[#f8b6a6] border border-[#f8b6a6]/60">
-                        {r.source === "strava" ? "Strava" : "Manual"}
-                      </span>
-                      <span className="font-semibold">{r.km}km · {r.minutes}min · {r.elev_m || 0}m climb</span>
-                    </div>
-                    {trailNames.length > 0 && (
-                      <div className="text-xs text-[var(--muted)] mt-1">
-                        {trailNames.slice(0, 5).join(" · ")}{trailNames.length > 5 && ` +${trailNames.length - 5} more`}
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-[var(--muted)] ml-3">→</span>
-                </a>
-              );
-            })}
-          </div>
-        </section>
       )}
 
       {day.details.length === 0 ? (

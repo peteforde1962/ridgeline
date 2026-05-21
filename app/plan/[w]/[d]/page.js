@@ -33,7 +33,7 @@ export default async function PlanDayPage({ params }) {
 
   const [{ data: storedSessions }, { data: noteRow }, { data: dayRides }] = await Promise.all([
     supabase.from("plan_sessions")
-      .select("id,session_idx,completed,tweak,swapped_to,is_extra,custom_name,custom_notes")
+      .select("id,session_idx,completed,tweak,swapped_to,is_extra,custom_name,custom_notes,ride_id,ai_workout")
       .eq("user_id", user.id).eq("week_index", wIdx).eq("day_index", dIdx),
     supabase.from("plan_day_notes")
       .select("note").eq("user_id", user.id).eq("week_index", wIdx).eq("day_index", dIdx).maybeSingle(),
@@ -140,45 +140,6 @@ export default async function PlanDayPage({ params }) {
         />
       </div>
 
-      {/* Actual rides on this day */}
-      {(dayRides || []).length > 0 && (
-        <section className="card mb-4">
-          <h2 className="text-lg font-bold mb-3">Recorded rides ({dayRides.length})</h2>
-          <div className="space-y-2">
-            {dayRides.map((r) => {
-              const trailNames = (r.ride_trails || []).map(rt => rt.trails?.name).filter(Boolean);
-              return (
-                <a
-                  key={r.id}
-                  href={`/rides/${r.id}`}
-                  className="flex items-center justify-between p-3 rounded-lg border transition hover:border-[var(--accent)]"
-                  style={{ background: "var(--panel2)", borderColor: "var(--line)" }}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs px-2 py-0.5 rounded bg-[#f8b6a6]/20 text-[#f8b6a6] border border-[#f8b6a6]/60">
-                        {r.source === "strava" ? "Strava" : "Manual"}
-                      </span>
-                      <span className="font-semibold">
-                        {r.km}km · {r.minutes}min · {r.elev_m || 0}m climb
-                      </span>
-                    </div>
-                    {trailNames.length > 0 && (
-                      <div className="text-xs text-[var(--muted)] mt-1">
-                        {trailNames.slice(0, 5).join(" · ")}{trailNames.length > 5 && ` +${trailNames.length - 5} more`}
-                      </div>
-                    )}
-                    {r.notes && (
-                      <div className="text-xs text-[var(--muted)] mt-1 italic truncate">"{r.notes}"</div>
-                    )}
-                  </div>
-                  <span className="text-[var(--muted)] ml-3">→</span>
-                </a>
-              );
-            })}
-          </div>
-        </section>
-      )}
 
       <nav className="flex justify-between mt-6">
         {hasPrev ? (

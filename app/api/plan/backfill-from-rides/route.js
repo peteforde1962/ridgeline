@@ -12,7 +12,8 @@ export async function POST() {
   if (!user) return Response.json({ error: "Not signed in" }, { status: 401 });
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-  const { data: rides }   = await supabase.from("rides").select("id, date").eq("user_id", user.id);
+  const { data: rides }   = await supabase.from("rides").select("id, date").eq("user_id", user.id)
+    .order("date", { ascending: true });
 
   if (!profile || !rides) return Response.json({ ok: true, ridesScanned: 0, planTicked: 0 });
 
@@ -39,6 +40,7 @@ export async function POST() {
             session_idx: sIdx,
             completed: true,
             tweak: "standard",
+            ride_id: ride.id,
           });
         }
       });
@@ -53,6 +55,7 @@ export async function POST() {
         custom_name: "Recorded ride",
         completed: true,
         tweak: "standard",
+        ride_id: ride.id,
       });
     }
   }

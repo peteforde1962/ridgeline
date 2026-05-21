@@ -105,6 +105,7 @@ export async function POST(request) {
                 session_idx: sIdx,
                 completed: true,
                 tweak: "standard",
+                ride_id: rideIns.id,
               });
             }
           });
@@ -119,6 +120,7 @@ export async function POST(request) {
             custom_name: "Recorded ride",
             completed: true,
             tweak: "standard",
+            ride_id: rideIns.id,
           });
         }
         if (rows.length > 0) {
