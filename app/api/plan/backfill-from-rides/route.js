@@ -17,23 +17,44 @@ export async function POST() {
   if (!profile || !rides) return Response.json({ ok: true, ridesScanned: 0, planTicked: 0 });
 
   const plan = buildPlan(profile);
+  // Reserved session_idx for Strava-derived ride markers on days with no
+  // planned ride. Stays out of the way of template (0..N) and manual extras
+  // (which start at day.details.length).
+  const STRAVA_MARKER_IDX = 100;
+
   const rows = [];
   for (const ride of rides) {
     const planIdx = rideToPlanIndex(profile.started_at, ride.date, plan.length);
     if (!planIdx) continue;
     const day = plan[planIdx.weekIndex].days[planIdx.dayIndex];
-    day.details.forEach((s, sIdx) => {
-      if (s.type === "ride") {
-        rows.push({
-          user_id: user.id,
-          week_index: planIdx.weekIndex,
-          day_index:  planIdx.dayIndex,
-          session_idx: sIdx,
-          completed: true,
-          tweak: "standard",
-        });
-      }
-    });
+
+    const hasPlannedRide = day.details.some((s) => s.type === "ride");
+    if (hasPlannedRide) {
+      day.details.forEach((s, sIdx) => {
+        if (s.type === "ride") {
+          rows.push({
+            user_id: user.id,
+            week_index: planIdx.weekIndex,
+            day_index:  planIdx.dayIndex,
+            session_idx: sIdx,
+            completed: true,
+            tweak: "standard",
+          });
+        }
+      });
+    } else {
+      rows.push({
+        user_id: user.id,
+        week_index: planIdx.weekIndex,
+        day_index:  planIdx.dayIndex,
+        session_idx: STRAVA_MARKER_IDX,
+        is_extra: true,
+        swapped_to: "ride",
+        custom_name: "Recorded ride",
+        completed: true,
+        tweak: "standard",
+      });
+    }
   }
 
   let ticked = 0;

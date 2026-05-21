@@ -93,19 +93,34 @@ export async function POST(request) {
       const planIdx = rideToPlanIndex(profile.started_at, row.date, plan.length);
       if (planIdx) {
         const day = plan[planIdx.weekIndex].days[planIdx.dayIndex];
+        const hasPlannedRide = day.details.some((s) => s.type === "ride");
         const rows = [];
-        day.details.forEach((s, sIdx) => {
-          if (s.type === "ride") {
-            rows.push({
-              user_id: profile.id,
-              week_index: planIdx.weekIndex,
-              day_index:  planIdx.dayIndex,
-              session_idx: sIdx,
-              completed: true,
-              tweak: "standard",
-            });
-          }
-        });
+        if (hasPlannedRide) {
+          day.details.forEach((s, sIdx) => {
+            if (s.type === "ride") {
+              rows.push({
+                user_id: profile.id,
+                week_index: planIdx.weekIndex,
+                day_index:  planIdx.dayIndex,
+                session_idx: sIdx,
+                completed: true,
+                tweak: "standard",
+              });
+            }
+          });
+        } else {
+          rows.push({
+            user_id: profile.id,
+            week_index: planIdx.weekIndex,
+            day_index:  planIdx.dayIndex,
+            session_idx: 100,
+            is_extra: true,
+            swapped_to: "ride",
+            custom_name: "Recorded ride",
+            completed: true,
+            tweak: "standard",
+          });
+        }
         if (rows.length > 0) {
           const { data: ticked } = await admin.from("plan_sessions")
             .upsert(rows, { onConflict: "user_id,week_index,day_index,session_idx", ignoreDuplicates: true })
