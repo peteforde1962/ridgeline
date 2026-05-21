@@ -3,6 +3,7 @@
 import { adminClient } from "@/lib/supabase/admin";
 import { ensureFreshToken, activityToRide } from "@/lib/strava";
 import { detectTrailsForActivity } from "@/lib/trail-detection";
+import { buildPlan, rideToPlanIndex } from "@/lib/plan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,7 +86,38 @@ export async function POST(request) {
         .in("id", detection.matches.map(m => m.trailId));
     }
 
-    return Response.json({ ok: true, inserted: true, linkedTrails: links.length, source: detection.source });
+    // Auto-tick plan ride session for the ride's date.
+    let planTicked = 0;
+    try {
+      const plan = buildPlan(profile);
+      const planIdx = rideToPlanIndex(profile.started_at, row.date, plan.length);
+      if (planIdx) {
+        const day = plan[planIdx.weekIndex].days[planIdx.dayIndex];
+        const rows = [];
+        day.details.forEach((s, sIdx) => {
+          if (s.type === "ride") {
+            rows.push({
+              user_id: profile.id,
+              week_index: planIdx.weekIndex,
+              day_index:  planIdx.dayIndex,
+              session_idx: sIdx,
+              completed: true,
+              tweak: "standard",
+            });
+          }
+        });
+        if (rows.length > 0) {
+          const { data: ticked } = await admin.from("plan_sessions")
+            .upsert(rows, { onConflict: "user_id,week_index,day_index,session_idx", ignoreDuplicates: true })
+            .select("id");
+          planTicked = (ticked || []).length;
+        }
+      }
+    } catch (e) {
+      console.warn("Plan auto-tick failed:", e.message);
+    }
+
+    return Response.json({ ok: true, inserted: true, linkedTrails: links.length, source: detection.source, planTicked });
   } catch (e) {
     return Response.json({ ok: false, error: e.message }, { status: 500 });
   }
