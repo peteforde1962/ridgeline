@@ -8,6 +8,7 @@ import {
 } from "@/lib/plan";
 import PlanDayCell from "@/components/PlanDayCell";
 import PageHeader from "@/components/PageHeader";
+import BackfillPlanButton from "@/components/BackfillPlanButton";
 
 export default async function PlanPage() {
   const supabase = createClient();
@@ -73,10 +74,14 @@ export default async function PlanPage() {
     <main className="min-h-screen p-6 max-w-6xl mx-auto">
       <PageHeader />
       <h1 className="text-3xl font-extrabold mb-1">{plan.length}-Week Plan</h1>
-      <p className="text-[var(--muted)] mb-5">
+      <p className="text-[var(--muted)] mb-3">
         Tap a session tag to cycle: <span className="text-[var(--text)]">○ pending → ✓ done → ✗ skipped</span>.
         Click a day to add workouts, notes, or change details. ✎ = day has notes.
       </p>
+
+      <div className="mb-5">
+        <BackfillPlanButton />
+      </div>
 
       <div className="grid grid-cols-5 gap-2 mb-6">
         {phaseSummary.map((p) => {
