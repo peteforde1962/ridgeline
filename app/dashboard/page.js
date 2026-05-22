@@ -150,28 +150,8 @@ export default async function DashboardPage() {
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {/* Distance bar chart */}
-        <div className="card">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Distance · last 7 days</h2>
-          <div className="flex items-end gap-2 h-32">
-            {kmByDay.map((d) => {
-              const h = d.km > 0 ? Math.max(4, (d.km / maxKm) * 100) : 2;
-              const label = new Date(d.date).toLocaleDateString(undefined, { weekday: "short" });
-              return (
-                <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1" title={`${d.km.toFixed(1)} km`}>
-                  <div className="text-[10px] text-[var(--muted)]">{d.km > 0 ? d.km.toFixed(0) : ""}</div>
-                  <div
-                    className="w-full rounded-t"
-                    style={{
-                      height: `${h}%`,
-                      background: d.km > 0 ? "linear-gradient(180deg, var(--accent), var(--accent2,#fccabb))" : "var(--bg2)",
-                    }}
-                  />
-                  <div className="text-[10px] text-[var(--muted)]">{label}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <DistanceChart kmByDay={kmByDay} maxKm={maxKm} totalKm={kmThisWeek} />
+
 
         {/* Readiness — line + points */}
         <div className="card">
@@ -297,6 +277,83 @@ function MiniMetric({ label, v, invert }) {
     <div>
       <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
       <div className="text-2xl font-extrabold" style={{ color: tone }}>{v}<span className="text-sm text-[var(--muted)]">/10</span></div>
+    </div>
+  );
+}
+
+// SVG bar chart for distance with axis labels + grid lines + total.
+function DistanceChart({ kmByDay, maxKm, totalKm }) {
+  const W = 340, H = 150, padX = 30, padY = 14, padBottom = 22;
+  // Round max up to a clean tick number (5, 10, 20, 50, etc.)
+  const ceilNice = (n) => {
+    if (n <= 5) return 5;
+    if (n <= 10) return 10;
+    if (n <= 20) return 20;
+    if (n <= 50) return 50;
+    if (n <= 100) return 100;
+    return Math.ceil(n / 50) * 50;
+  };
+  const yMax = ceilNice(maxKm);
+  const yTicks = [yMax, yMax / 2, 0];
+  const x = (i) => padX + (i / 7) * (W - padX - 6) + (W - padX - 6) / 14;
+  const barW = (W - padX - 6) / 7 - 6;
+  const y = (v) => padY + (1 - v / yMax) * (H - padY - padBottom);
+
+  return (
+    <div className="card">
+      <div className="flex items-baseline justify-between mb-3">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">Distance · last 7 days</h2>
+        <div className="text-xs">
+          <span className="text-[var(--muted)] mr-2">Total</span>
+          <span className="font-extrabold text-[var(--text)]">{totalKm.toFixed(1)} km</span>
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="distGradient" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%"  stopColor="var(--accent)"  stopOpacity="1" />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.4" />
+          </linearGradient>
+        </defs>
+        {/* grid lines + y-axis labels */}
+        {yTicks.map((t, i) => (
+          <g key={i}>
+            <line x1={padX} y1={y(t)} x2={W - 6} y2={y(t)} stroke="var(--line)" strokeWidth="0.5" strokeDasharray={t === 0 ? "0" : "2,3"} />
+            <text x={padX - 6} y={y(t) + 3} textAnchor="end" fontSize="9" fill="var(--muted)">{t}</text>
+          </g>
+        ))}
+        {/* bars */}
+        {kmByDay.map((d, i) => {
+          const bh = d.km > 0 ? (H - padY - padBottom) * (d.km / yMax) : 0;
+          const by = y(d.km > 0 ? d.km : 0);
+          return (
+            <g key={d.date}>
+              {d.km > 0 ? (
+                <>
+                  <rect
+                    x={x(i) - barW / 2}
+                    y={by}
+                    width={barW}
+                    height={Math.max(2, bh)}
+                    rx="3"
+                    fill="url(#distGradient)"
+                  >
+                    <title>{d.km.toFixed(1)} km</title>
+                  </rect>
+                  <text x={x(i)} y={by - 4} textAnchor="middle" fontSize="9" fontWeight="700" fill="var(--text)">
+                    {d.km.toFixed(d.km < 10 ? 1 : 0)}
+                  </text>
+                </>
+              ) : (
+                <circle cx={x(i)} cy={H - padBottom - 2} r="2" fill="var(--line)" />
+              )}
+              <text x={x(i)} y={H - 6} textAnchor="middle" fontSize="10" fill="var(--muted)">
+                {new Date(d.date).toLocaleDateString(undefined, { weekday: "short" })}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }
