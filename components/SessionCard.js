@@ -14,6 +14,18 @@ import { sessionLabel, sessionTagClass, scaleSessionName } from "@/lib/plan";
 
 const SWAPPABLE_TYPES = ["ride", "strength", "yoga", "run", "rope", "rest"];
 
+// Generic name + notes when a session is swapped to a different type — replaces
+// the template's original description (e.g. swap a run for yoga and you no longer
+// see "30-40 min easy aerobic run").
+const SWAP_DEFAULTS = {
+  ride:     { name: "Ride session",          notes: "Pick a route. Use today's intensity to guide effort." },
+  strength: { name: "Strength session",       notes: "Open the Strength library for a workout — or generate one with Coach." },
+  yoga:     { name: "Yoga / mobility session", notes: "Open the Yoga library for a flow — or generate one with Coach." },
+  run:      { name: "Run session",            notes: "Open the Running library for session ideas." },
+  rope:     { name: "Flow rope session",      notes: "Open the Flow Rope library for drills." },
+  rest:     { name: "Rest day",               notes: "Walk, hydrate, sleep. Adaptation happens now." },
+};
+
 export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, session, stored }) {
   const router = useRouter();
   const supabase = createClient();
@@ -29,7 +41,13 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
 
   const effectiveType = swappedTo || session.type;
   const isSkipped = tweak === "skipped";
-  const displayedName = isSkipped ? `(skipped) ${session.name}` : scaleSessionName(session.name, tweak);
+  // When swapped, replace the original name/notes with a generic default for the new type.
+  const effectiveSession = swappedTo
+    ? { type: swappedTo, ...SWAP_DEFAULTS[swappedTo] }
+    : session;
+  const displayedName = isSkipped
+    ? `(skipped) ${effectiveSession.name}`
+    : scaleSessionName(effectiveSession.name, tweak);
   const linkedRideId = stored?.ride_id;
 
   async function persist(next) {
@@ -98,7 +116,7 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
         </button>
       </div>
 
-      {session.notes && <p className="text-sm text-[var(--muted)] mb-3">{session.notes}</p>}
+      {effectiveSession.notes && <p className="text-sm text-[var(--muted)] mb-3">{effectiveSession.notes}</p>}
 
       <div className="flex flex-wrap gap-2 items-center mb-2">
         {["easier", "standard", "harder"].map((opt) => (
