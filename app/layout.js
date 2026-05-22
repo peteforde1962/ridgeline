@@ -1,6 +1,7 @@
 import "./globals.css";
 import MobileTabBar from "@/components/MobileTabBar";
 import Sidebar from "@/components/Sidebar";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata = {
   title: "RidgeLine — MTB Training",
@@ -22,6 +23,7 @@ export default function RootLayout({ children }) {
         <Sidebar />
         {children}
         <MobileTabBar />
+        <SpeedInsights />
       </body>
     </html>
   );
