@@ -69,5 +69,23 @@ export async function POST() {
     ticked = (data || []).length;
   }
 
-  return Response.json({ ok: true, ridesScanned: rides.length, planTicked: ticked });
+  // Second pass: backfill ride_id on existing rows that don't have it yet.
+  // Walk rides again, set ride_id on any plan_session for the matching date
+  // where ride_id is currently null. Preserves all other state.
+  let linkedExisting = 0;
+  for (const ride of rides) {
+    const planIdx = rideToPlanIndex(profile.started_at, ride.date, plan.length);
+    if (!planIdx) continue;
+    const { data: updated } = await supabase
+      .from("plan_sessions")
+      .update({ ride_id: ride.id })
+      .eq("user_id", user.id)
+      .eq("week_index", planIdx.weekIndex)
+      .eq("day_index", planIdx.dayIndex)
+      .is("ride_id", null)
+      .select("id");
+    linkedExisting += (updated || []).length;
+  }
+
+  return Response.json({ ok: true, ridesScanned: rides.length, planTicked: ticked, linkedExisting });
 }

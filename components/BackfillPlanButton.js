@@ -27,7 +27,7 @@ export default function BackfillPlanButton() {
       </button>
       {result && (
         <span className="text-sm text-[var(--green)]">
-          ✓ Scanned {result.ridesScanned} ride{result.ridesScanned === 1 ? "" : "s"} · ticked {result.planTicked} plan session{result.planTicked === 1 ? "" : "s"}.
+          ✓ Scanned {result.ridesScanned} ride{result.ridesScanned === 1 ? "" : "s"} · ticked {result.planTicked} · linked {result.linkedExisting ?? 0}.
         </span>
       )}
       {error && <span className="text-sm text-[var(--red)]">⚠ {error}</span>}
