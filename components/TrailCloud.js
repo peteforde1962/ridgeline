@@ -29,8 +29,9 @@ export default function TrailCloud({ trails }) {
           ? "var(--accent3)"
           : "var(--muted)";
         return (
-          <span
+          <a
             key={t.id}
+            href={`/trails/${t.id}`}
             title={`${t.count} ride${t.count === 1 ? "" : "s"}${t.fastestSec ? ` · best ${Math.floor(t.fastestSec / 60)}:${String(t.fastestSec % 60).padStart(2, "0")}` : ""}`}
             style={{
               fontSize: `${fs}px`,
@@ -38,10 +39,10 @@ export default function TrailCloud({ trails }) {
               fontWeight: fs >= 22 ? 800 : 600,
               lineHeight: 1.15,
             }}
-            className="hover:opacity-70 cursor-default"
+            className="hover:opacity-70 hover:underline cursor-pointer"
           >
             {t.name}
-          </span>
+          </a>
         );
       })}
     </div>

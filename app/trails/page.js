@@ -125,7 +125,7 @@ export default async function TrailsPage() {
             {riddenTrails.slice(0, 10).map((t) => (
               <div key={t.id} className="flex flex-wrap items-center gap-3 py-2 border-b border-[var(--line)] last:border-0">
                 <div className="flex-1 min-w-[160px]">
-                  <div className="font-semibold">{t.name}</div>
+                  <a href={`/trails/${t.id}`} className="font-semibold hover:underline">{t.name}</a>
                   {t.condition ? (
                     <div className="text-xs text-[var(--muted)] mt-0.5">
                       {t.condition.notes && <span>"{t.condition.notes}" — </span>}
