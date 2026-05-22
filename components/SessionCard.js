@@ -123,8 +123,8 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
             {aiBusy ? "Generating…" : aiWorkout ? "Show workout details" : "🤖 Get workout from Coach"}
           </button>
         )}
-        {/* If session is linked to an actual ride, link there */}
-        {linkedRideId && (
+        {/* Only show View Ride for actual ride sessions */}
+        {linkedRideId && effectiveType === "ride" && (
           <a href={`/rides/${linkedRideId}`} className="btn-ghost text-xs"
              style={{ padding: "5px 10px" }}>
             View ride →

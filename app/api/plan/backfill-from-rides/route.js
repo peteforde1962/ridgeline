@@ -69,19 +69,27 @@ export async function POST() {
     ticked = (data || []).length;
   }
 
-  // Second pass: backfill ride_id on existing rows that don't have it yet.
-  // Walk rides again, set ride_id on any plan_session for the matching date
-  // where ride_id is currently null. Preserves all other state.
+  // Second pass: link ride_id on existing rows that are actually RIDES
+  // (template ride sessions + the strava extra marker at idx 100). Never
+  // touches yoga/strength/etc rows.
   let linkedExisting = 0;
   for (const ride of rides) {
     const planIdx = rideToPlanIndex(profile.started_at, ride.date, plan.length);
     if (!planIdx) continue;
+    const day = plan[planIdx.weekIndex].days[planIdx.dayIndex];
+
+    const rideIndices = [STRAVA_MARKER_IDX];
+    day.details.forEach((s, sIdx) => {
+      if (s.type === "ride") rideIndices.push(sIdx);
+    });
+
     const { data: updated } = await supabase
       .from("plan_sessions")
       .update({ ride_id: ride.id })
       .eq("user_id", user.id)
       .eq("week_index", planIdx.weekIndex)
       .eq("day_index", planIdx.dayIndex)
+      .in("session_idx", rideIndices)
       .is("ride_id", null)
       .select("id");
     linkedExisting += (updated || []).length;
