@@ -211,10 +211,10 @@ export default async function DashboardPage() {
       {todayCheckin && (
         <section className="card mb-4">
           <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Today's check-in</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <MiniMetric label="Sleep"    v={todayCheckin.sleep}    />
-            <MiniMetric label="Soreness" v={todayCheckin.soreness} invert />
-            <MiniMetric label="Energy"   v={todayCheckin.energy}   />
+          <div className="grid grid-cols-3 gap-2">
+            <GaugeDial label="Sleep"    value={todayCheckin.sleep}    />
+            <GaugeDial label="Soreness" value={todayCheckin.soreness} invert />
+            <GaugeDial label="Energy"   value={todayCheckin.energy}   />
           </div>
           {todayCheckin.notes && (
             <p className="text-sm text-[var(--muted)] mt-3 italic">"{todayCheckin.notes}"</p>
@@ -302,6 +302,49 @@ function MiniMetric({ label, v, invert }) {
     <div>
       <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
       <div className="text-2xl font-extrabold" style={{ color: tone }}>{v}<span className="text-sm text-[var(--muted)]">/10</span></div>
+    </div>
+  );
+}
+
+// Semi-circular gauge dial.
+function GaugeDial({ label, value, max = 10, invert = false }) {
+  const W = 160, H = 110, cx = W / 2, cy = H - 18, r = 56;
+  const t = Math.min(1, Math.max(0, value / max));
+  const angle = Math.PI - t * Math.PI; // π (left) → 0 (right)
+
+  // Tier-based color
+  const goodVal = invert ? value <= 3 : value >= 8;
+  const badVal  = invert ? value >= 8 : value <= 3;
+  const color   = goodVal ? "#5cb85c" : badVal ? "#d9534f" : "#f0ad4e";
+
+  const x1 = cx + r * Math.cos(Math.PI),  y1 = cy - r * Math.sin(Math.PI);
+  const x2 = cx + r * Math.cos(0),         y2 = cy - r * Math.sin(0);
+  const fx = cx + r * Math.cos(angle),     fy = cy - r * Math.sin(angle);
+  const nx = cx + (r - 4) * Math.cos(angle), ny = cy - (r - 4) * Math.sin(angle);
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
+        {/* background arc */}
+        <path
+          d={`M${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
+          fill="none" stroke="var(--bg2)" strokeWidth="11" strokeLinecap="round"
+        />
+        {/* filled arc */}
+        <path
+          d={`M${x1} ${y1} A ${r} ${r} 0 0 1 ${fx} ${fy}`}
+          fill="none" stroke={color} strokeWidth="11" strokeLinecap="round"
+        />
+        {/* needle */}
+        <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="var(--text)" strokeWidth="2" strokeLinecap="round" />
+        <circle cx={cx} cy={cy} r="4" fill="var(--text)" />
+        {/* value text */}
+        <text x={cx} y={cy - 14} textAnchor="middle" fontSize="22" fontWeight="800" fill={color}>{value}</text>
+        {/* end-labels */}
+        <text x={x1 - 4} y={y1 + 12} textAnchor="middle" fontSize="8" fill="var(--muted)">{invert ? "best" : "worst"}</text>
+        <text x={x2 + 4} y={y2 + 12} textAnchor="middle" fontSize="8" fill="var(--muted)">{invert ? "worst" : "best"}</text>
+      </svg>
+      <div className="text-[11px] uppercase tracking-wide text-[var(--muted)] font-bold -mt-1">{label}</div>
     </div>
   );
 }
