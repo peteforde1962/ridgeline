@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildPlan, currentWeekIndex, todayDayIndex, readinessFromCheckin } from "@/lib/plan";
+import { buildPlan, currentWeekIndex, todayDayIndex, todayDateInTz, readinessFromCheckin } from "@/lib/plan";
 import SessionCard from "@/components/SessionCard";
 
 export default async function TodayPage() {
@@ -15,7 +15,7 @@ export default async function TodayPage() {
   const { data: profile } = await supabase
     .from("profiles").select("*").eq("id", user.id).single();
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayDateInTz(profile?.timezone);
   const [{ data: todayCheckin }, { data: dayRides }] = await Promise.all([
     supabase.from("check_ins").select("*")
       .eq("user_id", user.id).eq("date", today).maybeSingle(),
@@ -27,7 +27,7 @@ export default async function TodayPage() {
 
   const plan = buildPlan(profile);
   const wIdx = currentWeekIndex(profile?.started_at, plan.length);
-  const dIdx = todayDayIndex();
+  const dIdx = todayDayIndex(profile?.timezone);
   const week = plan[wIdx];
   const day = week.days[dIdx];
 

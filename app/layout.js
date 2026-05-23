@@ -1,6 +1,7 @@
 import "./globals.css";
 import MobileTabBar from "@/components/MobileTabBar";
 import Sidebar from "@/components/Sidebar";
+import TimezoneDetector from "@/components/TimezoneDetector";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata = {
@@ -23,6 +24,7 @@ export default function RootLayout({ children }) {
         <Sidebar />
         {children}
         <MobileTabBar />
+        <TimezoneDetector />
         <SpeedInsights />
       </body>
     </html>

@@ -5,7 +5,7 @@ export const revalidate = 0;
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildPlan, currentWeekIndex, todayDayIndex } from "@/lib/plan";
+import { buildPlan, currentWeekIndex, todayDayIndex, todayDateInTz } from "@/lib/plan";
 import { recoveryRecommendation } from "@/lib/recovery";
 import { trainingLoadSeries, currentLoad, formInterpretation } from "@/lib/training-load";
 import SignOutButton from "@/components/SignOutButton";
@@ -16,12 +16,13 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const today = new Date().toISOString().slice(0, 10);
+  // Load profile first so we know the user's timezone before computing "today".
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const today = todayDateInTz(profile?.timezone);
   const sevenDaysAgo  = new Date(Date.now() - 7 * 86400_000).toISOString().slice(0, 10);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
 
   const [
-    { data: profile },
     { data: todayCheckin },
     { data: weekRides },
     { data: monthRides },
@@ -29,7 +30,6 @@ export default async function DashboardPage() {
     { data: planSessions },
     { data: weekCheckins },
   ] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("check_ins").select("*").eq("user_id", user.id).eq("date", today).maybeSingle(),
     supabase.from("rides").select("id, date, km, elev_m, minutes, notes, ride_trails(trails(name))").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: false }),
     supabase.from("rides").select("km, minutes, elev_m, date, ride_trails(trails(name))").eq("user_id", user.id).gte("date", thirtyDaysAgo),
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
 
   const plan = buildPlan(profile);
   const wIdx = currentWeekIndex(profile?.started_at, plan.length);
-  const dIdx = todayDayIndex();
+  const dIdx = todayDayIndex(profile?.timezone);
   const week = plan[wIdx];
   const todaySessions = week?.days?.[dIdx]?.details || [];
   const todayIsRest = todaySessions.length === 0;
