@@ -93,41 +93,53 @@ export async function POST(request) {
       const planIdx = rideToPlanIndex(profile.started_at, row.date, plan.length);
       if (planIdx) {
         const day = plan[planIdx.weekIndex].days[planIdx.dayIndex];
-        const hasPlannedRide = day.details.some((s) => s.type === "ride");
-        const rows = [];
-        if (hasPlannedRide) {
-          day.details.forEach((s, sIdx) => {
-            if (s.type === "ride") {
-              rows.push({
-                user_id: profile.id,
-                week_index: planIdx.weekIndex,
-                day_index:  planIdx.dayIndex,
-                session_idx: sIdx,
-                completed: true,
-                tweak: "standard",
-                ride_id: rideIns.id,
-              });
-            }
-          });
+
+        const { data: existingDay } = await admin
+          .from("plan_sessions")
+          .select("session_idx, is_extra, swapped_to, ride_id")
+          .eq("user_id", profile.id)
+          .eq("week_index", planIdx.weekIndex)
+          .eq("day_index", planIdx.dayIndex);
+
+        const isRideRow = (s) => {
+          if (s.swapped_to === "ride") return true;
+          if (s.is_extra) return s.swapped_to === "ride";
+          return day.details[s.session_idx]?.type === "ride";
+        };
+
+        const existingRideRow = (existingDay || []).find(isRideRow);
+        const templateRideIdx = day.details.findIndex((s) => s.type === "ride");
+
+        if (existingRideRow) {
+          await admin.from("plan_sessions")
+            .update({ completed: true, ride_id: rideIns.id })
+            .eq("user_id", profile.id)
+            .eq("week_index", planIdx.weekIndex)
+            .eq("day_index", planIdx.dayIndex)
+            .eq("session_idx", existingRideRow.session_idx);
+          planTicked = 1;
+        } else if (templateRideIdx >= 0) {
+          await admin.from("plan_sessions").upsert({
+            user_id: profile.id,
+            week_index: planIdx.weekIndex,
+            day_index:  planIdx.dayIndex,
+            session_idx: templateRideIdx,
+            completed: true, tweak: "standard",
+            ride_id: rideIns.id,
+          }, { onConflict: "user_id,week_index,day_index,session_idx" });
+          planTicked = 1;
         } else {
-          rows.push({
+          await admin.from("plan_sessions").upsert({
             user_id: profile.id,
             week_index: planIdx.weekIndex,
             day_index:  planIdx.dayIndex,
             session_idx: 100,
-            is_extra: true,
-            swapped_to: "ride",
+            is_extra: true, swapped_to: "ride",
             custom_name: "Recorded ride",
-            completed: true,
-            tweak: "standard",
+            completed: true, tweak: "standard",
             ride_id: rideIns.id,
-          });
-        }
-        if (rows.length > 0) {
-          const { data: ticked } = await admin.from("plan_sessions")
-            .upsert(rows, { onConflict: "user_id,week_index,day_index,session_idx", ignoreDuplicates: true })
-            .select("id");
-          planTicked = (ticked || []).length;
+          }, { onConflict: "user_id,week_index,day_index,session_idx" });
+          planTicked = 1;
         }
       }
     } catch (e) {
