@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buildPlan, currentWeekIndex, todayDayIndex } from "@/lib/plan";
 import { recoveryRecommendation } from "@/lib/recovery";
+import { trainingLoadSeries, currentLoad, formInterpretation } from "@/lib/training-load";
 import SignOutButton from "@/components/SignOutButton";
 import Icon from "@/lib/icons";
 
@@ -32,7 +33,7 @@ export default async function DashboardPage() {
     supabase.from("check_ins").select("*").eq("user_id", user.id).eq("date", today).maybeSingle(),
     supabase.from("rides").select("id, date, km, elev_m, minutes, notes, ride_trails(trails(name))").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: false }),
     supabase.from("rides").select("km, minutes, elev_m, date, ride_trails(trails(name))").eq("user_id", user.id).gte("date", thirtyDaysAgo),
-    supabase.from("rides").select("date, km").eq("user_id", user.id),
+    supabase.from("rides").select("date, km, elev_m, minutes").eq("user_id", user.id),
     supabase.from("plan_sessions").select("week_index, day_index, session_idx, completed").eq("user_id", user.id),
     supabase.from("check_ins").select("date, sleep, soreness, energy").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: true }),
   ]);
@@ -93,6 +94,11 @@ export default async function DashboardPage() {
   });
 
   const recovery = recoveryRecommendation({ rides: weekRides, todayCheckin });
+
+  // Training load — 60-day series and current values
+  const loadSeries = trainingLoadSeries(allRides || [], 60);
+  const load = currentLoad(loadSeries);
+  const form = formInterpretation(load.form);
 
   return (
     <main className="min-h-screen p-6 max-w-6xl mx-auto">
@@ -159,6 +165,25 @@ export default async function DashboardPage() {
           <ReadinessLine last7={last7} readinessByDay={readinessByDay} />
           <p className="text-[10px] text-[var(--muted)] mt-2">sleep + energy − soreness</p>
         </div>
+      </section>
+
+      {/* Training Load (TrainingPeaks-style) */}
+      <section className="card mb-4">
+        <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">Training load</h2>
+          <span className="text-xs px-2 py-0.5 rounded" style={{ background: `${form.color}22`, color: form.color, border: `1px solid ${form.color}66` }}>
+            {form.label}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mb-3">
+          <LoadStat label="Fitness (CTL)"  v={load.fitness} sub="42-day avg" color="#5fa7c4" />
+          <LoadStat label="Fatigue (ATL)"  v={load.fatigue} sub="7-day avg"  color="#f0ad4e" />
+          <LoadStat label="Form (TSB)"     v={load.form}    sub="fitness − fatigue" color={form.color} />
+        </div>
+        <TrainingLoadChart series={loadSeries} />
+        <p className="text-[10px] text-[var(--muted)] mt-2">
+          TSS estimated from ride duration + intensity (no power meter required).
+        </p>
       </section>
 
       {/* Recovery status */}
@@ -278,6 +303,63 @@ function MiniMetric({ label, v, invert }) {
       <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
       <div className="text-2xl font-extrabold" style={{ color: tone }}>{v}<span className="text-sm text-[var(--muted)]">/10</span></div>
     </div>
+  );
+}
+
+function LoadStat({ label, v, sub, color }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
+      <div className="text-2xl font-extrabold" style={{ color }}>{v.toFixed(1)}</div>
+      <div className="text-[10px] text-[var(--muted)]">{sub}</div>
+    </div>
+  );
+}
+
+function TrainingLoadChart({ series }) {
+  const W = 600, H = 130, padX = 30, padY = 10, padBottom = 18;
+  if (!series || series.length === 0) {
+    return <div className="text-sm text-[var(--muted)] py-4 text-center">No ride data yet.</div>;
+  }
+  const allVals = [...series.map(s => s.ctl), ...series.map(s => s.atl), ...series.map(s => s.tsb)];
+  const yMin = Math.min(0, Math.floor(Math.min(...allVals) - 5));
+  const yMax = Math.max(10, Math.ceil(Math.max(...allVals) + 5));
+  const x = (i) => padX + (i / (series.length - 1)) * (W - padX - 6);
+  const y = (v) => padY + ((yMax - v) / (yMax - yMin)) * (H - padY - padBottom);
+
+  function path(key) {
+    return series.map((s, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(s[key])}`).join(" ");
+  }
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
+      {/* zero line if in range */}
+      {yMin < 0 && yMax > 0 && (
+        <line x1={padX} y1={y(0)} x2={W - 6} y2={y(0)} stroke="var(--line)" strokeWidth="0.5" strokeDasharray="3,3" />
+      )}
+      {/* Y axis tick at top */}
+      <text x={padX - 6} y={padY + 4} textAnchor="end" fontSize="9" fill="var(--muted)">{yMax}</text>
+      <text x={padX - 6} y={H - padBottom + 3} textAnchor="end" fontSize="9" fill="var(--muted)">{yMin}</text>
+      {/* CTL — fitness (blue) */}
+      <path d={path("ctl")} fill="none" stroke="#5fa7c4" strokeWidth="2" />
+      {/* ATL — fatigue (amber) */}
+      <path d={path("atl")} fill="none" stroke="#f0ad4e" strokeWidth="2" strokeDasharray="4,2" />
+      {/* TSB — form (peach) */}
+      <path d={path("tsb")} fill="none" stroke="var(--accent)" strokeWidth="2.5" />
+      {/* date labels: first + last */}
+      <text x={padX} y={H - 4} textAnchor="start" fontSize="9" fill="var(--muted)">
+        {new Date(series[0].date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+      </text>
+      <text x={W - 6} y={H - 4} textAnchor="end" fontSize="9" fill="var(--muted)">
+        Today
+      </text>
+      {/* legend */}
+      <g transform={`translate(${padX + 4}, ${padY + 4})`}>
+        <rect width="3" height="3" y="0" fill="#5fa7c4" /><text x="6" y="3" fontSize="9" fill="var(--muted)">Fitness</text>
+        <rect width="3" height="3" y="8" fill="#f0ad4e" /><text x="6" y="11" fontSize="9" fill="var(--muted)">Fatigue</text>
+        <rect width="3" height="3" y="16" fill="#f8b6a6" /><text x="6" y="19" fontSize="9" fill="var(--muted)">Form</text>
+      </g>
+    </svg>
   );
 }
 
