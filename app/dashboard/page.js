@@ -182,7 +182,7 @@ export default async function DashboardPage() {
         </div>
         <TrainingLoadChart series={loadSeries} />
         <p className="text-[10px] text-[var(--muted)] mt-2">
-          TSS estimated from ride duration + intensity (no power meter required).
+          Hover labels for definitions. Fatigue (ATL) and Form (TSB) move opposite each other by design — Form = Fitness − Fatigue, so when fatigue spikes, form drops. The shaded zones above the dashed line are "fresh", below are "fatigued".
         </p>
       </section>
 
@@ -349,10 +349,19 @@ function GaugeDial({ label, value, max = 10, invert = false }) {
   );
 }
 
+const LOAD_TIPS = {
+  "Fitness (CTL)":  "Chronic Training Load — 42-day exponentially-weighted average of training stress. Slow-moving baseline of your overall conditioning.",
+  "Fatigue (ATL)":  "Acute Training Load — 7-day exponentially-weighted average. Tracks short-term tiredness from recent hard sessions.",
+  "Form (TSB)":     "Training Stress Balance = Fitness − Fatigue. Positive = fresh, ready to race. Near zero = balanced. Negative = loading or under-recovered.",
+};
+
 function LoadStat({ label, v, sub, color }) {
   return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
+    <div title={LOAD_TIPS[label] || ""} className="cursor-help">
+      <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] flex items-center gap-1">
+        {label}
+        <span className="text-[var(--muted)] opacity-60">ⓘ</span>
+      </div>
       <div className="text-2xl font-extrabold" style={{ color }}>{v.toFixed(1)}</div>
       <div className="text-[10px] text-[var(--muted)]">{sub}</div>
     </div>
@@ -376,6 +385,17 @@ function TrainingLoadChart({ series }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
+      {/* Freshness zones (only meaningful in form/TSB space) */}
+      {yMin < 0 && yMax > 0 && (
+        <>
+          {/* Positive zone — fresh */}
+          <rect x={padX} y={y(yMax)} width={W - padX - 6} height={y(0) - y(yMax)}
+                fill="#5cb85c" opacity="0.05" />
+          {/* Negative zone — fatigued */}
+          <rect x={padX} y={y(0)} width={W - padX - 6} height={y(yMin) - y(0)}
+                fill="#d9534f" opacity="0.05" />
+        </>
+      )}
       {/* zero line if in range */}
       {yMin < 0 && yMax > 0 && (
         <line x1={padX} y1={y(0)} x2={W - 6} y2={y(0)} stroke="var(--line)" strokeWidth="0.5" strokeDasharray="3,3" />
