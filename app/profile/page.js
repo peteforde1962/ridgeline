@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import ProfileForm from "@/components/ProfileForm";
 import StravaCard from "@/components/StravaCard";
 import PageHeader from "@/components/PageHeader";
+import EmailPrefs from "@/components/EmailPrefs";
 
 export default async function ProfilePage({ searchParams }) {
   const supabase = createClient();
@@ -30,6 +31,8 @@ export default async function ProfilePage({ searchParams }) {
 
       <div className="space-y-4">
         <ProfileForm userId={user.id} profile={profile} />
+
+        <EmailPrefs userId={user.id} profile={profile} />
 
         <StravaCard
           connected={!!profile?.strava_refresh_token}
