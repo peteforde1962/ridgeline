@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildPlan, currentWeekIndex, todayDayIndex, todayDateInTz, readinessFromCheckin } from "@/lib/plan";
+import { buildPlan, currentWeekIndex, todayDayIndex, todayDateInTz, readinessFromCheckin, sessionLabel } from "@/lib/plan";
 import SessionCard from "@/components/SessionCard";
 
 export default async function TodayPage() {
@@ -89,12 +89,12 @@ export default async function TodayPage() {
         </div>
       ) : (
         day.details.map((session, i) => {
-          const stored = storedSessions?.find(
-            (s) => s.week_index === wIdx && s.day_index === dIdx && s.session_idx === i
+          const stored = (storedSessions || []).find(
+            (s) => !s.is_extra && s.session_idx === i
           );
           return (
             <SessionCard
-              key={i}
+              key={`t-${i}`}
               userId={user.id}
               weekIndex={wIdx}
               dayIndex={dIdx}
@@ -105,6 +105,26 @@ export default async function TodayPage() {
           );
         })
       )}
+
+      {/* User-added extras + auto-imported "Recorded ride" markers */}
+      {(storedSessions || []).filter((s) => s.is_extra).map((e) => {
+        const synthSession = {
+          type:  e.swapped_to || "ride",
+          name:  e.custom_name || `Extra ${sessionLabel(e.swapped_to || "ride")}`,
+          notes: e.custom_notes || (e.ride_id ? "Recorded ride — click View ride for details" : "User-added workout"),
+        };
+        return (
+          <SessionCard
+            key={`e-${e.session_idx}`}
+            userId={user.id}
+            weekIndex={wIdx}
+            dayIndex={dIdx}
+            sessionIdx={e.session_idx}
+            session={synthSession}
+            stored={e}
+          />
+        );
+      })}
     </main>
   );
 }
