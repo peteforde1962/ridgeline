@@ -350,21 +350,24 @@ function GaugeDial({ label, value, max = 10, invert = false }) {
 }
 
 const LOAD_TIPS = {
-  "Fitness (CTL)":  "Chronic Training Load — 42-day exponentially-weighted average of training stress. Slow-moving baseline of your overall conditioning.",
-  "Fatigue (ATL)":  "Acute Training Load — 7-day exponentially-weighted average. Tracks short-term tiredness from recent hard sessions.",
-  "Form (TSB)":     "Training Stress Balance = Fitness − Fatigue. Positive = fresh, ready to race. Near zero = balanced. Negative = loading or under-recovered.",
+  "Fitness (CTL)":  "Chronic Training Load — slow-moving baseline of your overall conditioning.",
+  "Fatigue (ATL)":  "Acute Training Load — short-term tiredness from recent hard sessions.",
+  "Form (TSB)":     "Fitness − Fatigue. Positive = fresh & ready. Negative = loading or under-recovered.",
 };
 
 function LoadStat({ label, v, sub, color }) {
   return (
-    <div title={LOAD_TIPS[label] || ""} className="cursor-help">
-      <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] flex items-center gap-1">
-        {label}
-        <span className="text-[var(--muted)] opacity-60">ⓘ</span>
-      </div>
-      <div className="text-2xl font-extrabold" style={{ color }}>{v.toFixed(1)}</div>
-      <div className="text-[10px] text-[var(--muted)]">{sub}</div>
-    </div>
+    <details className="group">
+      <summary className="list-none cursor-pointer">
+        <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] flex items-center gap-1">
+          {label}
+          <span className="text-[var(--muted)] opacity-60 group-open:text-[var(--accent)] group-open:opacity-100">ⓘ</span>
+        </div>
+        <div className="text-2xl font-extrabold" style={{ color }}>{v.toFixed(1)}</div>
+        <div className="text-[10px] text-[var(--muted)]">{sub}</div>
+      </summary>
+      <p className="text-[10px] text-[var(--muted)] mt-1 italic">{LOAD_TIPS[label]}</p>
+    </details>
   );
 }
 
