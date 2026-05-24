@@ -25,26 +25,12 @@ export async function GET(request) {
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  let sent = 0, skipped = 0, failed = 0;
+  // Hobby plan: cron can only run once daily. Send to every enabled user
+  // in one shot (delivery time = whatever the cron schedule fires, in their inbox).
+  let sent = 0, failed = 0;
   const details = [];
 
   for (const u of (users || [])) {
-    if (!u.timezone) { skipped++; continue; }
-    const targetHour = u.daily_email_hour ?? 6;
-    let localHour;
-    try {
-      localHour = parseInt(
-        new Intl.DateTimeFormat("en-US", {
-          timeZone: u.timezone,
-          hour: "numeric",
-          hour12: false,
-        }).format(new Date()),
-        10
-      );
-    } catch { skipped++; continue; }
-
-    if (localHour !== targetHour) { skipped++; continue; }
-
     try {
       await sendDailyBriefing(u, admin);
       sent++;
@@ -55,5 +41,5 @@ export async function GET(request) {
     }
   }
 
-  return Response.json({ ok: true, total: users?.length || 0, sent, skipped, failed, details });
+  return Response.json({ ok: true, total: users?.length || 0, sent, failed, details });
 }

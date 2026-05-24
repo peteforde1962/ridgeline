@@ -37,24 +37,14 @@ export default function EmailPrefs({ userId, profile }) {
     <div className="card">
       <h2 className="text-lg font-bold mb-2">Daily briefing email</h2>
       <p className="text-sm text-[var(--muted)] mb-4">
-        A short morning email with today's prescribed workout, recovery status, and a link.
+        A short email each morning with today's prescribed workout, recovery status, and a link.
+        Sent once per day around 6am Pacific time.
       </p>
-      <label className="flex items-center gap-3 mb-3 cursor-pointer">
+      <label className="flex items-center gap-3 cursor-pointer">
         <input type="checkbox" checked={enabled} onChange={toggle} disabled={busy} className="w-4 h-4" />
         <span>Send me a daily briefing</span>
+        {saved && <span className="text-xs text-[var(--green)] ml-2">✓ Saved</span>}
       </label>
-      <div className="flex items-center gap-3">
-        <label className="text-sm text-[var(--muted)]">Send at:</label>
-        <select value={hour} onChange={changeHour} disabled={busy || !enabled} className="input" style={{ width: "auto" }}>
-          {Array.from({ length: 13 }, (_, i) => i + 4).map((h) => (
-            <option key={h} value={h}>
-              {h <= 11 ? `${h}:00 am` : h === 12 ? "12:00 pm" : `${h - 12}:00 pm`}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-[var(--muted)]">your local time</span>
-        {saved && <span className="text-xs text-[var(--green)]">✓ Saved</span>}
-      </div>
     </div>
   );
 }
