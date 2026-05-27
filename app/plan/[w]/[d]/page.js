@@ -45,9 +45,20 @@ export default async function PlanDayPage({ params }) {
       : Promise.resolve({ data: [] }),
   ]);
 
-  const extras = (storedSessions || []).filter(s => s.is_extra).sort((a, b) => a.session_idx - b.session_idx);
+  // Fetch the linked rides so we can show the Strava title on each session card.
+  const linkedRideIds = (storedSessions || []).map((s) => s.ride_id).filter(Boolean);
+  const { data: linkedRides } = linkedRideIds.length > 0
+    ? await supabase.from("rides").select("id, notes, km, minutes, elev_m").in("id", linkedRideIds)
+    : { data: [] };
+  const rideById = {};
+  (linkedRides || []).forEach((r) => { rideById[r.id] = r; });
+
+  // Attach linkedRide onto each stored session for SessionCard to use.
+  const annotate = (s) => (s.ride_id ? { ...s, linkedRide: rideById[s.ride_id] } : s);
+
+  const extras = (storedSessions || []).filter(s => s.is_extra).map(annotate).sort((a, b) => a.session_idx - b.session_idx);
   const templateState = (storedSessions || []).reduce((acc, s) => {
-    if (!s.is_extra) acc[s.session_idx] = s;
+    if (!s.is_extra) acc[s.session_idx] = annotate(s);
     return acc;
   }, {});
 

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ProfileForm from "@/components/ProfileForm";
 import StravaCard from "@/components/StravaCard";
+import SuuntoCard from "@/components/SuuntoCard";
 import PageHeader from "@/components/PageHeader";
 import EmailPrefs from "@/components/EmailPrefs";
 
@@ -19,6 +20,7 @@ export default async function ProfilePage({ searchParams }) {
     .single();
 
   const stravaStatus = searchParams?.strava || "";
+  const suuntoStatus = searchParams?.suunto || "";
 
   return (
     <main className="min-h-screen p-6 max-w-3xl mx-auto">
@@ -39,6 +41,13 @@ export default async function ProfilePage({ searchParams }) {
           athleteId={profile?.strava_athlete_id}
           lastSyncAt={profile?.strava_last_sync_at}
           strava={stravaStatus}
+        />
+
+        <SuuntoCard
+          connected={!!profile?.suunto_refresh_token}
+          userId={profile?.suunto_user_id}
+          lastSyncAt={profile?.suunto_last_sync_at}
+          suunto={suuntoStatus}
         />
       </div>
     </main>

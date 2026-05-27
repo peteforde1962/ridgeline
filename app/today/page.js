@@ -39,6 +39,17 @@ export default async function TodayPage() {
     .eq("week_index", wIdx)
     .eq("day_index", dIdx);
 
+  // Fetch linked rides so SessionCard can show the Strava title.
+  const linkedRideIds = (storedSessions || []).map((s) => s.ride_id).filter(Boolean);
+  const { data: linkedRides } = linkedRideIds.length > 0
+    ? await supabase.from("rides").select("id, notes, km, minutes, elev_m").in("id", linkedRideIds)
+    : { data: [] };
+  const rideById = {};
+  (linkedRides || []).forEach((r) => { rideById[r.id] = r; });
+  const annotatedSessions = (storedSessions || []).map((s) =>
+    s.ride_id ? { ...s, linkedRide: rideById[s.ride_id] } : s
+  );
+
   const readiness = readinessFromCheckin(todayCheckin);
 
   return (
@@ -89,7 +100,7 @@ export default async function TodayPage() {
         </div>
       ) : (
         day.details.map((session, i) => {
-          const stored = (storedSessions || []).find(
+          const stored = (annotatedSessions || []).find(
             (s) => !s.is_extra && s.session_idx === i
           );
           return (
@@ -107,7 +118,7 @@ export default async function TodayPage() {
       )}
 
       {/* User-added extras + auto-imported "Recorded ride" markers */}
-      {(storedSessions || []).filter((s) => s.is_extra).map((e) => {
+      {(annotatedSessions || []).filter((s) => s.is_extra).map((e) => {
         const synthSession = {
           type:  e.swapped_to || "ride",
           name:  e.custom_name || `Extra ${sessionLabel(e.swapped_to || "ride")}`,

@@ -45,10 +45,18 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
   const effectiveSession = swappedTo
     ? { type: swappedTo, ...SWAP_DEFAULTS[swappedTo] }
     : session;
-  const displayedName = isSkipped
-    ? `(skipped) ${effectiveSession.name}`
-    : scaleSessionName(effectiveSession.name, tweak);
   const linkedRideId = stored?.ride_id;
+  const linkedRide   = stored?.linkedRide;
+
+  // If the session is linked to an actual ride, prefer the ride's title for display.
+  // Falls back to the swap default / template name otherwise.
+  const rideTitle = linkedRide?.notes ? linkedRide.notes.split(" · ")[0] : null;
+  const displayName =
+    rideTitle ? rideTitle :
+    isSkipped ? `(skipped) ${effectiveSession.name}` :
+    scaleSessionName(effectiveSession.name, tweak);
+  // Keep the plan reference visible if we substituted a ride title.
+  const plannedSub = rideTitle ? `Planned: ${effectiveSession.name}` : null;
 
   async function persist(next) {
     setBusy(true);
@@ -104,7 +112,7 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
           </span>
           <h3 className="font-bold text-base">
             <span style={{ color: statusColor, marginRight: 6, fontWeight: 900 }}>{statusIcon}</span>
-            {displayedName}
+            {displayName}
           </h3>
         </div>
         <button
@@ -116,7 +124,15 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
         </button>
       </div>
 
-      {effectiveSession.notes && <p className="text-sm text-[var(--muted)] mb-3">{effectiveSession.notes}</p>}
+      {plannedSub && <p className="text-xs text-[var(--muted)] mb-1">{plannedSub}</p>}
+      {linkedRide && (
+        <p className="text-sm text-[var(--muted)] mb-3">
+          {linkedRide.km}km · {linkedRide.minutes}min · {linkedRide.elev_m || 0}m climb
+        </p>
+      )}
+      {!linkedRide && effectiveSession.notes && (
+        <p className="text-sm text-[var(--muted)] mb-3">{effectiveSession.notes}</p>
+      )}
 
       <div className="flex flex-wrap gap-2 items-center mb-2">
         {["easier", "standard", "harder"].map((opt) => (
