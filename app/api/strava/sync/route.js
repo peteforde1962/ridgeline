@@ -49,6 +49,16 @@ export async function POST(request) {
         continue;
       }
 
+      // Fetch the detailed activity so we get segment_efforts (Strava-tagged
+      // trail segments). Falls back gracefully if the call fails.
+      let detailedActivity = activity;
+      try {
+        const dRes = await fetch(`https://www.strava.com/api/v3/activities/${activity.id}?include_all_efforts=true`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (dRes.ok) detailedActivity = await dRes.json();
+      } catch {}
+
       const { data: rideRow, error: upErr } = await supabase
         .from("rides")
         .upsert([row], { onConflict: "user_id,strava_activity_id", ignoreDuplicates: false })
@@ -61,7 +71,7 @@ export async function POST(request) {
       inserted++;
 
       const detection = await detectTrailsForActivity({
-        supabase, userId: user.id, activity, userTrails: trailsCache,
+        supabase, userId: user.id, activity: detailedActivity, userTrails: trailsCache,
       });
 
       // Compute per-trail seconds from point counts × total moving time.
@@ -72,9 +82,11 @@ export async function POST(request) {
         ride_id: rideRow.id,
         trail_id: m.trailId,
         points_on_trail: m.points || null,
-        seconds_on_trail: totalPoints > 0 && m.points
-          ? Math.round((m.points / totalPoints) * totalSeconds)
-          : null,
+        seconds_on_trail: m.seconds_on_trail != null
+          ? m.seconds_on_trail
+          : (totalPoints > 0 && m.points
+              ? Math.round((m.points / totalPoints) * totalSeconds)
+              : null),
       }));
 
       debug.push({

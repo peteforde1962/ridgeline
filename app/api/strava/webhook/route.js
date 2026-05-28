@@ -37,7 +37,7 @@ export async function POST(request) {
     if (!profile?.strava_refresh_token) return Response.json({ ok: true, note: "no matching user" });
 
     const accessToken = await ensureFreshToken(admin, profile);
-    const actRes = await fetch(`${STRAVA_API}/activities/${event.object_id}`, {
+    const actRes = await fetch(`${STRAVA_API}/activities/${event.object_id}?include_all_efforts=true`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!actRes.ok) return Response.json({ ok: false, error: "strava fetch failed" }, { status: 502 });
@@ -66,9 +66,11 @@ export async function POST(request) {
       ride_id: rideIns.id,
       trail_id: m.trailId,
       points_on_trail: m.points || null,
-      seconds_on_trail: totalPoints > 0 && m.points
-        ? Math.round((m.points / totalPoints) * totalSeconds)
-        : null,
+      seconds_on_trail: m.seconds_on_trail != null
+        ? m.seconds_on_trail
+        : (totalPoints > 0 && m.points
+            ? Math.round((m.points / totalPoints) * totalSeconds)
+            : null),
     }));
 
     // Re-detection: wipe and re-insert so seconds_on_trail always refreshes.
