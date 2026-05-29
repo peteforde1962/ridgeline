@@ -33,7 +33,9 @@ export default async function DashboardPage() {
     supabase.from("check_ins").select("*").eq("user_id", user.id).eq("date", today).maybeSingle(),
     supabase.from("rides").select("id, date, km, elev_m, minutes, notes, ride_trails(trails(name))").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: false }),
     supabase.from("rides").select("km, minutes, elev_m, date, ride_trails(trails(name))").eq("user_id", user.id).gte("date", thirtyDaysAgo),
-    supabase.from("rides").select("date, km, elev_m, minutes").eq("user_id", user.id),
+    supabase.from("rides")
+      .select("date, km, elev_m, minutes, avg_hr, avg_watts, weighted_avg_watts, suffer_score")
+      .eq("user_id", user.id),
     supabase.from("plan_sessions").select("week_index, day_index, session_idx, completed").eq("user_id", user.id),
     supabase.from("check_ins").select("date, sleep, soreness, energy").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: true }),
   ]);
@@ -95,8 +97,9 @@ export default async function DashboardPage() {
 
   const recovery = recoveryRecommendation({ rides: weekRides, todayCheckin });
 
-  // Training load — 60-day series and current values
-  const loadSeries = trainingLoadSeries(allRides || [], 60);
+  // Training load — 60-day series and current values. Pass profile so FTP/LTHR
+  // get used when present; ride data we just selected includes the intensity cols.
+  const loadSeries = trainingLoadSeries(allRides || [], 60, profile);
   const load = currentLoad(loadSeries);
   const form = formInterpretation(load.form);
 
@@ -170,7 +173,9 @@ export default async function DashboardPage() {
       {/* Training Load (TrainingPeaks-style) */}
       <section className="card mb-4">
         <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">Training load</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">
+            Training load · <a href="/training-load" className="text-[var(--accent)] normal-case font-normal">detail →</a>
+          </h2>
           <span className="text-xs px-2 py-0.5 rounded" style={{ background: `${form.color}22`, color: form.color, border: `1px solid ${form.color}66` }}>
             {form.label}
           </span>

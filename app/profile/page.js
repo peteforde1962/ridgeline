@@ -10,6 +10,7 @@ import EmailPrefs from "@/components/EmailPrefs";
 import CoachInviteCard from "@/components/CoachInviteCard";
 import StudentCoachCard from "@/components/StudentCoachCard";
 import RoleSwitcher from "@/components/RoleSwitcher";
+import TrainingZones from "@/components/TrainingZones";
 
 export default async function ProfilePage({ searchParams }) {
   const supabase = createClient();
@@ -51,6 +52,8 @@ export default async function ProfilePage({ searchParams }) {
           : <StudentCoachCard profile={profile} coach={coach} />}
 
         <ProfileForm userId={user.id} profile={profile} />
+
+        <TrainingZones profile={profile} />
 
         <EmailPrefs userId={user.id} profile={profile} />
 

@@ -113,6 +113,7 @@ export default async function DocsPage() {
               <li><Link href="/checkin">/checkin</Link> — daily sleep/soreness/energy.</li>
               <li><Link href="/trails">/trails</Link> — derived trail list + word cloud + Log Ride link + worldwide trail search.</li>
               <li><Code>/rides/[id]</Code> — single ride with per-trail breakdown and map.</li>
+              <li><Link href="/training-load">/training-load</Link> — TrainingPeaks-style fitness/fatigue/form: 90-day chart with 14-day projection, daily TSS bars, weekly totals, per-ride TSS table, signal-mix breakdown.</li>
               <li><Link href="/strength">/strength</Link>, <Link href="/yoga">/yoga</Link>, <Link href="/run">/run</Link>, <Link href="/rope">/rope</Link> — workout libraries.</li>
               <li><Link href="/skills">/skills</Link> — self-rated skills (endurance, cornering, drops, etc.).</li>
               <li><Link href="/videos">/videos</Link> — uploaded clips + linked YouTube/Vimeo, grouped by type.</li>
@@ -335,6 +336,7 @@ export default async function DocsPage() {
               <li><Code>coach-migration.sql</Code> — role / coach_id / coach_code + video_comments + storage policy.</li>
               <li><Code>coach-rls-fix.sql</Code> — <Code>my_coach_id()</Code> helper to break recursion.</li>
               <li><Code>coach-approval-migration.sql</Code> — <Code>coach_approved</Code>, <Code>coach_requested_at</Code>.</li>
+              <li><Code>training-load-migration.sql</Code> — intensity columns on <Code>rides</Code> (<Code>avg_hr</Code>, <Code>avg_watts</Code>, <Code>suffer_score</Code>, etc.) + <Code>ftp</Code>, <Code>lthr</Code>, <Code>hr_max</Code> on <Code>profiles</Code>.</li>
             </List>
           </Section>
 
@@ -427,6 +429,7 @@ npx vercel --prod`}</Pre>
               <li>Coach/student roles, pose overlay, video comments</li>
               <li>Admin-gated coach approval flow</li>
               <li>This docs page</li>
+              <li>Real TrainingPeaks-style training load (Strava intensity capture, power/HR-based TSS, /training-load page)</li>
             </List>
           </Section>
         </div>

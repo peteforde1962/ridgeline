@@ -32,6 +32,7 @@ const ICONS = {
   movie:   <Icon path={<><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M2 10h20M7 6V4M17 6V4" /></>} />,
   cog:     <Icon path={<><circle cx="12" cy="12" r="3.5" /><path d="M12 2v3M12 19v3M4.2 4.2l2.2 2.2M17.6 17.6l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 6.4l2.2-2.2" /></>} />,
   whistle: <Icon path={<><circle cx="9" cy="13" r="6" /><path d="M15 13h6M18 10v6" /></>} />,
+  chart:   <Icon path={<><path d="M3 3v18h18" /><path d="M7 14l4-5 4 3 5-7" /></>} />,
 };
 
 const TOP = [
@@ -40,6 +41,7 @@ const TOP = [
   { href: "/plan",       label: "Plan",        ico: ICONS.cal },
   { href: "/checkin",    label: "Check-in",    ico: ICONS.heart },
   { href: "/trails",     label: "Trails & Rides", ico: ICONS.bike },
+  { href: "/training-load", label: "Training load", ico: ICONS.chart },
   { href: "/coach",      label: "Coach AI",    ico: ICONS.bolt },
   { href: "/skills",     label: "Skills",      ico: ICONS.bars },
 ];
