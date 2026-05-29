@@ -60,11 +60,16 @@ do $$ begin
     using (coach_id = auth.uid());
 exception when duplicate_object then null; end $$;
 
+-- SECURITY DEFINER helper to look up the current user's coach_id without
+-- triggering RLS recursion on profiles.
+create or replace function my_coach_id() returns uuid
+language sql security definer stable as $$
+  select coach_id from profiles where id = auth.uid();
+$$;
+
 do $$ begin
   create policy "student reads own coach" on profiles for select
-    using (
-      id = (select coach_id from profiles where id = auth.uid())
-    );
+    using (id = my_coach_id());
 exception when duplicate_object then null; end $$;
 
 -- check_ins, rides, trails, plan_sessions: coaches can read their students' rows.
