@@ -73,9 +73,9 @@ export default function Sidebar() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const { data } = await supabase.from("profiles")
-          .select("is_admin, role").eq("id", user.id).single();
+          .select("is_admin, role, coach_approved").eq("id", user.id).single();
         setIsAdmin(!!data?.is_admin);
-        setIsCoach(data?.role === "coach");
+        setIsCoach(data?.role === "coach" && !!data?.coach_approved);
       } catch {}
     })();
   }, [pathname]);

@@ -14,8 +14,8 @@ export default async function StudentDetail({ params }) {
 
   // Verify the requester is a coach AND owns this student. RLS will also block,
   // but we redirect cleanly if they sneak the URL.
-  const { data: me } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (me?.role !== "coach") redirect("/profile");
+  const { data: me } = await supabase.from("profiles").select("role, coach_approved").eq("id", user.id).single();
+  if (me?.role !== "coach" || !me?.coach_approved) redirect("/profile");
 
   // RLS will only return this row if coach_id = current coach.
   const { data: student } = await supabase

@@ -14,8 +14,8 @@ export default async function CoachVideoPage({ params }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: me } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (me?.role !== "coach") redirect("/profile");
+  const { data: me } = await supabase.from("profiles").select("role, coach_approved").eq("id", user.id).single();
+  if (me?.role !== "coach" || !me?.coach_approved) redirect("/profile");
 
   // RLS allows coaches to read student videos.
   const { data: video } = await supabase.from("videos")

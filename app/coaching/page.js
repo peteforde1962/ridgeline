@@ -14,6 +14,7 @@ export default async function CoachingHome() {
   const { data: profile } = await supabase
     .from("profiles").select("*").eq("id", user.id).single();
   if (profile?.role !== "coach") redirect("/profile?become=coach");
+  if (!profile?.coach_approved) redirect("/profile?coach=pending");
 
   const { data: students } = await supabase
     .from("profiles")

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import PageHeader from "@/components/PageHeader";
 import SubscribeStravaButton from "@/components/SubscribeStravaButton";
+import CoachApprovalRow from "@/components/CoachApprovalRow";
 
 export default async function AdminPage() {
   const supabase = createClient();
@@ -31,6 +32,8 @@ export default async function AdminPage() {
     { data: ridesByUser },
     { data: sessionsByUser },
     { data: stravaSub },
+    { data: pendingCoaches },
+    { data: activeCoaches },
   ] = await Promise.all([
     admin.from("profiles").select("id, email, name, preset, strava_athlete_id, created_at", { count: "exact" }),
     admin.from("check_ins").select("user_id").gte("date", sevenDaysAgo),
@@ -40,6 +43,14 @@ export default async function AdminPage() {
     admin.from("rides").select("user_id"),
     admin.from("plan_sessions").select("user_id").eq("completed", true),
     admin.from("strava_subscription").select("*").maybeSingle(),
+    admin.from("profiles")
+      .select("id, email, name, coach_requested_at")
+      .eq("role", "coach").eq("coach_approved", false)
+      .order("coach_requested_at", { ascending: false }),
+    admin.from("profiles")
+      .select("id, email, name, coach_code")
+      .eq("role", "coach").eq("coach_approved", true)
+      .order("name"),
   ]);
 
   // Aggregate
@@ -81,6 +92,56 @@ export default async function AdminPage() {
         <Stat label="Active (7d)"        v={activeIds.size} />
         <Stat label="New signups (7d)"   v={signups7} sub={`${signups30} in 30d`} />
         <Stat label="Strava connected"   v={stravaConnected ?? 0} />
+      </section>
+
+      {/* Coach approval queue */}
+      <section className="card mb-6">
+        <h2 className="text-lg font-bold mb-1">
+          Coach requests
+          {pendingCoaches?.length > 0 && (
+            <span className="ml-2 text-xs px-2 py-0.5 rounded"
+                  style={{ background: "var(--accent)", color: "white" }}>
+              {pendingCoaches.length} pending
+            </span>
+          )}
+        </h2>
+        <p className="text-sm text-[var(--muted)] mb-3">
+          Users who toggled themselves to Coach in /profile. Approve to unlock the Coaching area for them.
+        </p>
+        {(!pendingCoaches || pendingCoaches.length === 0) ? (
+          <p className="text-sm text-[var(--muted)]">No pending requests.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-[var(--muted)] text-xs uppercase tracking-wide">
+                <th className="text-left p-2">User</th>
+                <th className="text-left p-2">Requested</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingCoaches.map((p) => <CoachApprovalRow key={p.id} profile={p} />)}
+            </tbody>
+          </table>
+        )}
+
+        {activeCoaches?.length > 0 && (
+          <details className="mt-4">
+            <summary className="text-xs text-[var(--muted)] cursor-pointer">
+              {activeCoaches.length} approved coach{activeCoaches.length === 1 ? "" : "es"} (click to view)
+            </summary>
+            <ul className="text-sm mt-2 space-y-1">
+              {activeCoaches.map((c) => (
+                <li key={c.id} className="flex justify-between border-b border-[var(--line)] py-1">
+                  <span>
+                    <strong>{c.name || c.email}</strong>
+                    <span className="text-[var(--muted)] ml-2">· code {c.coach_code || "—"}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </section>
 
       {/* Strava auto-sync */}

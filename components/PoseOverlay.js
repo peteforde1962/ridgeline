@@ -88,8 +88,10 @@ export default function PoseOverlay({ src, onTimeChange, currentTimeRef }) {
         );
         const lm = await PoseLandmarker.createFromOptions(fileset, {
           baseOptions: {
+            // Full model — slower than lite, but markedly more stable for
+            // coaching. Lite tends to jitter on dark MTB clothing.
             modelAssetPath:
-              "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+              "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
             delegate: "GPU",
           },
           runningMode: "VIDEO",
@@ -262,42 +264,50 @@ export default function PoseOverlay({ src, onTimeChange, currentTimeRef }) {
     <div>
       <div
         ref={wrapRef}
-        className="relative rounded-lg overflow-hidden"
+        className="rounded-lg overflow-hidden"
         style={{
           background: "#000",
-          // In fullscreen, fill the screen and center the video.
-          ...(isFullscreen ? { display: "flex", alignItems: "center", justifyContent: "center" } : {}),
+          position: "relative",
+          // In fullscreen, fill the screen and center the video stack.
+          ...(isFullscreen ? {
+            display: "flex", alignItems: "center", justifyContent: "center",
+            width: "100vw", height: "100vh",
+          } : {}),
         }}
       >
-        <video
-          ref={videoRef}
-          src={src}
-          controls
-          controlsList="nodownload nofullscreen"
-          disablePictureInPicture
-          playsInline
-          crossOrigin="anonymous"
-          style={{
-            display: "block",
-            ...(isFullscreen ? { maxWidth: "100%", maxHeight: "100%" } : { width: "100%" }),
-          }}
-        />
-        <canvas
-          ref={canvasRef}
-          style={{
-            position: "absolute",
-            top: 0, left: 0,
-            pointerEvents: "none",
-            width: videoRef.current?.clientWidth || "100%",
-            height: videoRef.current?.clientHeight || "100%",
-          }}
-        />
-        {/* Our own fullscreen toggle — replaces the native one so the canvas tags along. */}
+        {/* Inner stack — sizes to the video so canvas overlay aligns exactly. */}
+        <div style={{ position: "relative", display: "inline-block", lineHeight: 0 }}>
+          <video
+            ref={videoRef}
+            src={src}
+            controls
+            controlsList="nodownload nofullscreen"
+            disablePictureInPicture
+            playsInline
+            crossOrigin="anonymous"
+            style={{
+              display: "block",
+              ...(isFullscreen
+                ? { maxWidth: "100vw", maxHeight: "100vh" }
+                : { width: "100%" }),
+            }}
+          />
+          <canvas
+            ref={canvasRef}
+            style={{
+              position: "absolute",
+              top: 0, left: 0, right: 0, bottom: 0,
+              width: "100%", height: "100%",
+              pointerEvents: "none",
+            }}
+          />
+        </div>
+        {/* Custom fullscreen toggle — fullscreens the wrapper, so canvas tags along. */}
         <button
           type="button"
           onClick={toggleFullscreen}
           className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-semibold"
-          style={{ background: "rgba(0,0,0,.55)", color: "white" }}
+          style={{ background: "rgba(0,0,0,.55)", color: "white", zIndex: 10 }}
         >
           {isFullscreen ? "Exit ⤡" : "Fullscreen ⤢"}
         </button>
