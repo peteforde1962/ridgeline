@@ -59,7 +59,7 @@ export default async function TrainingLoadPage() {
       <PageHeader />
       <h1 className="text-3xl font-extrabold mb-1">Training load</h1>
       <p className="text-[var(--muted)] mb-6">
-        TrainingPeaks-style fitness, fatigue, and form. The chart projects 14 days forward assuming zero training.
+        Fitness, fatigue, and form. The chart projects 14 days forward assuming zero training.
       </p>
 
       {/* --- Current values + form interpretation --- */}
