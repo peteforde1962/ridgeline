@@ -4,11 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+function rand6() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("student");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState("");
@@ -18,16 +26,20 @@ export default function SignupPage() {
     setError(""); setInfo(""); setLoading(true);
 
     const { data, error } = await supabase.auth.signUp({ email, password });
-    setLoading(false);
+    if (error) { setLoading(false); setError(error.message); return; }
 
-    if (error) { setError(error.message); return; }
-
-    // Supabase may or may not require email confirmation depending on project settings.
+    // If we got a session immediately, update the role on the auto-created profile.
     if (data.user && data.session) {
-      router.push("/dashboard");
-    } else {
-      setInfo("Check your email to confirm your account, then sign in.");
+      const patch = { role };
+      if (role === "coach") patch.coach_code = rand6();
+      await supabase.from("profiles").update(patch).eq("id", data.user.id);
+      setLoading(false);
+      router.push(role === "coach" ? "/coaching" : "/dashboard");
+      return;
     }
+
+    setLoading(false);
+    setInfo("Check your email to confirm your account, then sign in. Set your role from your Profile page after sign-in.");
   }
 
   return (
@@ -55,6 +67,20 @@ export default function SignupPage() {
           type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
           className="input mb-4" placeholder="6+ characters"
         />
+
+        <label className="field-label">I'm signing up as</label>
+        <div className="flex gap-2 mb-4">
+          <button type="button" onClick={() => setRole("student")}
+            className={role === "student" ? "btn-primary text-sm" : "btn-ghost text-sm"}
+            style={{ padding: "10px 16px", flex: 1 }}>
+            Student
+          </button>
+          <button type="button" onClick={() => setRole("coach")}
+            className={role === "coach" ? "btn-primary text-sm" : "btn-ghost text-sm"}
+            style={{ padding: "10px 16px", flex: 1 }}>
+            Coach
+          </button>
+        </div>
 
         {error && <p className="text-[var(--red2,#e87262)] text-sm mb-3">⚠ {error}</p>}
         {info && <p className="text-[var(--green2,#6cc28a)] text-sm mb-3">{info}</p>}

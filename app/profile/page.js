@@ -7,6 +7,9 @@ import StravaCard from "@/components/StravaCard";
 import SuuntoCard from "@/components/SuuntoCard";
 import PageHeader from "@/components/PageHeader";
 import EmailPrefs from "@/components/EmailPrefs";
+import CoachInviteCard from "@/components/CoachInviteCard";
+import StudentCoachCard from "@/components/StudentCoachCard";
+import RoleSwitcher from "@/components/RoleSwitcher";
 
 export default async function ProfilePage({ searchParams }) {
   const supabase = createClient();
@@ -22,6 +25,15 @@ export default async function ProfilePage({ searchParams }) {
   const stravaStatus = searchParams?.strava || "";
   const suuntoStatus = searchParams?.suunto || "";
 
+  // If the student has a coach, load the coach profile for display.
+  let coach = null;
+  if (profile?.coach_id) {
+    const { data } = await supabase
+      .from("profiles").select("id, name, email")
+      .eq("id", profile.coach_id).maybeSingle();
+    coach = data;
+  }
+
   return (
     <main className="min-h-screen p-6 max-w-3xl mx-auto">
       <PageHeader />
@@ -32,6 +44,12 @@ export default async function ProfilePage({ searchParams }) {
       </p>
 
       <div className="space-y-4">
+        <RoleSwitcher profile={profile} />
+
+        {profile?.role === "coach"
+          ? <CoachInviteCard profile={profile} />
+          : <StudentCoachCard profile={profile} coach={coach} />}
+
         <ProfileForm userId={user.id} profile={profile} />
 
         <EmailPrefs userId={user.id} profile={profile} />

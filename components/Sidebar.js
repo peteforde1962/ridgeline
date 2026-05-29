@@ -31,6 +31,7 @@ const ICONS = {
   rope:    <Icon path={<><path d="M5 5c4 2 4 6 0 8s-4 6 0 8" /><path d="M19 5c-4 2-4 6 0 8s4 6 0 8" /></>} />,
   movie:   <Icon path={<><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M2 10h20M7 6V4M17 6V4" /></>} />,
   cog:     <Icon path={<><circle cx="12" cy="12" r="3.5" /><path d="M12 2v3M12 19v3M4.2 4.2l2.2 2.2M17.6 17.6l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 6.4l2.2-2.2" /></>} />,
+  whistle: <Icon path={<><circle cx="9" cy="13" r="6" /><path d="M15 13h6M18 10v6" /></>} />,
 };
 
 const TOP = [
@@ -52,6 +53,7 @@ const LIBRARIES = [
 ];
 
 const BOTTOM = [
+  { href: "/coaching",   label: "Coaching",    ico: ICONS.whistle, coachOnly: true },
   { href: "/profile",    label: "Profile",     ico: ICONS.cog },
   { href: "/admin",      label: "Admin",       ico: ICONS.bars, adminOnly: true },
 ];
@@ -61,16 +63,19 @@ const HIDDEN_ON = ["/", "/login", "/signup"];
 export default function Sidebar() {
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCoach, setIsCoach] = useState(false);
 
-  // Detect admin status to conditionally show the Admin link.
+  // Detect admin + coach status to conditionally show the relevant links.
   useEffect(() => {
     (async () => {
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const { data } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+        const { data } = await supabase.from("profiles")
+          .select("is_admin, role").eq("id", user.id).single();
         setIsAdmin(!!data?.is_admin);
+        setIsCoach(data?.role === "coach");
       } catch {}
     })();
   }, [pathname]);
@@ -119,7 +124,10 @@ export default function Sidebar() {
       </div>
 
       <div className="flex flex-col gap-0.5 mt-auto">
-        {BOTTOM.filter((it) => !it.adminOnly || isAdmin).map((item) => <Row key={item.href} item={item} />)}
+        {BOTTOM
+          .filter((it) => !it.adminOnly || isAdmin)
+          .filter((it) => !it.coachOnly || isCoach)
+          .map((item) => <Row key={item.href} item={item} />)}
       </div>
     </aside>
   );

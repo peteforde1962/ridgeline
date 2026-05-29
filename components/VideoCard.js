@@ -83,9 +83,14 @@ export default function VideoCard({ video, signedSrc }) {
       />
 
       <div className="flex justify-between items-center">
-        <button onClick={handleDelete} className="btn-ghost text-xs" style={{ padding: "4px 10px" }}>
-          Delete
-        </button>
+        <div className="flex gap-2">
+          <button onClick={handleDelete} className="btn-ghost text-xs" style={{ padding: "4px 10px" }}>
+            Delete
+          </button>
+          <a href={`/videos/${video.id}`} className="btn-ghost text-xs" style={{ padding: "4px 10px" }}>
+            Pose & comments →
+          </a>
+        </div>
         {dirty && (
           <button onClick={saveChanges} disabled={saving} className="btn-primary text-xs" style={{ padding: "4px 10px" }}>
             {saving ? "Saving…" : "Save changes"}
