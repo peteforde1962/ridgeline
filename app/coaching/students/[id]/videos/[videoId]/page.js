@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { adminClient } from "@/lib/supabase/admin";
 import PageHeader from "@/components/PageHeader";
 import VideoCoachingClient from "@/components/VideoCoachingClient";
 
@@ -21,13 +22,17 @@ export default async function CoachVideoPage({ params }) {
     .select("*").eq("id", params.videoId).maybeSingle();
   if (!video || video.user_id !== params.id) notFound();
 
+  // Use the admin client to bypass storage RLS — the page already verified
+  // the viewer is a coach who owns this student.
   let src = null;
+  let srcError = null;
   if (video.kind === "upload") {
-    const { data: signed } = await supabase.storage.from("videos")
-      .createSignedUrl(video.url, 3600);
+    const { data: signed, error } = await adminClient().storage
+      .from("videos").createSignedUrl(video.url, 3600);
     src = signed?.signedUrl || null;
+    srcError = error?.message || (!src ? "Could not generate signed URL" : null);
   } else {
-    src = video.url;  // youtube/vimeo embed — overlay won't work, we'll fall back
+    src = video.url;
   }
 
   return (
@@ -40,6 +45,12 @@ export default async function CoachVideoPage({ params }) {
       <p className="text-[var(--muted)] text-sm mb-5">
         {video.type} · {video.date}
       </p>
+
+      {srcError && (
+        <div className="card mb-4 text-sm" style={{ borderColor: "rgba(232,114,98,.5)" }}>
+          ⚠ {srcError}
+        </div>
+      )}
 
       <VideoCoachingClient
         videoId={video.id}

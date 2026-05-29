@@ -59,14 +59,18 @@ function torsoFromVerticalDeg(lm) {
 }
 
 export default function PoseOverlay({ src, onTimeChange, currentTimeRef }) {
+  const wrapRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const landmarkerRef = useRef(null);
   const rafRef = useRef(null);
+  const lastDetectAtRef = useRef(0);
+  const lastFrameTimeRef = useRef(-1);
   const [ready, setReady] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
   const [angles, setAngles] = useState(null);
   const [loadError, setLoadError] = useState("");
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Load MediaPipe Pose Landmarker once.
   useEffect(() => {
@@ -111,9 +115,22 @@ export default function PoseOverlay({ src, onTimeChange, currentTimeRef }) {
     const video = videoRef.current;
     if (!video || !ready) return;
 
+    // Throttle pose detection to ~15fps. Pose Landmarker is the bottleneck;
+    // the video itself still plays smoothly because it has its own pipeline.
+    const MIN_DETECT_MS = 66;
     function tick() {
       if (!video || video.paused || video.ended) return;
-      detectAndDraw();
+      const now = performance.now();
+      // Skip if same frame as last detection OR we're inside the throttle window.
+      if (now - lastDetectAtRef.current >= MIN_DETECT_MS &&
+          video.currentTime !== lastFrameTimeRef.current) {
+        lastDetectAtRef.current = now;
+        lastFrameTimeRef.current = video.currentTime;
+        detectAndDraw();
+      } else {
+        // Still redraw the canvas to track any size change.
+        drawSizedCanvas();
+      }
       rafRef.current = requestAnimationFrame(tick);
     }
     function onPlay() {
@@ -148,20 +165,28 @@ export default function PoseOverlay({ src, onTimeChange, currentTimeRef }) {
     };
   }, [ready, onTimeChange, currentTimeRef]);
 
-  function detectAndDraw() {
+  // Keep canvas pixel-size in sync with rendered video size. Called in the
+  // RAF loop so fullscreen + window-resize updates are reflected immediately.
+  function drawSizedCanvas() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const lm = landmarkerRef.current;
-    if (!video || !canvas || !lm) return;
-    if (video.readyState < 2) return;
-
-    // Match canvas size to the rendered video size for crisp overlay.
+    if (!video || !canvas) return null;
     const w = video.clientWidth;
     const h = video.clientHeight;
     if (canvas.width !== w) canvas.width = w;
     if (canvas.height !== h) canvas.height = h;
+    return { w, h, ctx: canvas.getContext("2d") };
+  }
 
-    const ctx = canvas.getContext("2d");
+  function detectAndDraw() {
+    const video = videoRef.current;
+    const lm = landmarkerRef.current;
+    if (!video || !lm) return;
+    if (video.readyState < 2) return;
+
+    const sized = drawSizedCanvas();
+    if (!sized) return;
+    const { w, h, ctx } = sized;
     ctx.clearRect(0, 0, w, h);
 
     const ts = performance.now();
@@ -217,25 +242,65 @@ export default function PoseOverlay({ src, onTimeChange, currentTimeRef }) {
     });
   }
 
+  // Fullscreen the WRAPPER, not the video, so the canvas overlay tags along.
+  async function toggleFullscreen() {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    if (document.fullscreenElement) {
+      await document.exitFullscreen?.();
+    } else {
+      await (wrap.requestFullscreen?.() || wrap.webkitRequestFullscreen?.());
+    }
+  }
+  useEffect(() => {
+    function onFs() { setIsFullscreen(!!document.fullscreenElement); }
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+
   return (
     <div>
-      <div className="relative rounded-lg overflow-hidden" style={{ background: "#000" }}>
+      <div
+        ref={wrapRef}
+        className="relative rounded-lg overflow-hidden"
+        style={{
+          background: "#000",
+          // In fullscreen, fill the screen and center the video.
+          ...(isFullscreen ? { display: "flex", alignItems: "center", justifyContent: "center" } : {}),
+        }}
+      >
         <video
           ref={videoRef}
           src={src}
           controls
+          controlsList="nodownload nofullscreen"
+          disablePictureInPicture
           playsInline
           crossOrigin="anonymous"
-          style={{ width: "100%", display: "block" }}
+          style={{
+            display: "block",
+            ...(isFullscreen ? { maxWidth: "100%", maxHeight: "100%" } : { width: "100%" }),
+          }}
         />
         <canvas
           ref={canvasRef}
           style={{
-            position: "absolute", inset: 0,
+            position: "absolute",
+            top: 0, left: 0,
             pointerEvents: "none",
-            width: "100%", height: "100%",
+            width: videoRef.current?.clientWidth || "100%",
+            height: videoRef.current?.clientHeight || "100%",
           }}
         />
+        {/* Our own fullscreen toggle — replaces the native one so the canvas tags along. */}
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-semibold"
+          style={{ background: "rgba(0,0,0,.55)", color: "white" }}
+        >
+          {isFullscreen ? "Exit ⤡" : "Fullscreen ⤢"}
+        </button>
       </div>
 
       <div className="flex items-center justify-between gap-3 mt-3 flex-wrap">
