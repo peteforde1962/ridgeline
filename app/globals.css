@@ -103,6 +103,31 @@ html, body {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
+/*
+  Glass variant — for charts, dials, and graphs. Semi-transparent panel
+  over a backdrop blur, with a faint top-edge highlight and a deeper
+  drop shadow so the card lifts off the page.
+*/
+.card-glass {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(38, 42, 43, 0.55) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 14px;
+  padding: 18px;
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  box-shadow:
+    0 6px 22px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 640px) {
+  .card-glass { padding: 14px; border-radius: 12px; }
+}
+
 input[type="range"] {
   accent-color: var(--accent);
   height: 24px;

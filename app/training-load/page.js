@@ -63,7 +63,7 @@ export default async function TrainingLoadPage() {
       </p>
 
       {/* --- Current values + form interpretation --- */}
-      <section className="card mb-4">
+      <section className="card-glass mb-4">
         <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
           <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">Now</h2>
           <span className="text-xs px-2 py-0.5 rounded"
@@ -79,7 +79,7 @@ export default async function TrainingLoadPage() {
       </section>
 
       {/* --- 90-day chart with projection --- */}
-      <section className="card mb-4">
+      <section className="card-glass mb-4">
         <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">90 days + 14-day projection</h2>
         <BigChart series={fullSeries} pivotDate={series[series.length - 1]?.date} />
         <div className="flex gap-4 text-xs text-[var(--muted)] mt-3 flex-wrap">
@@ -91,19 +91,19 @@ export default async function TrainingLoadPage() {
       </section>
 
       {/* --- Daily TSS bars (last 30 days) --- */}
-      <section className="card mb-4">
+      <section className="card-glass mb-4">
         <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Daily TSS · last 30 days</h2>
         <DailyTSSBars series={series.slice(-30)} />
       </section>
 
       {/* --- Weekly TSS totals (last 12 weeks) --- */}
-      <section className="card mb-4">
+      <section className="card-glass mb-4">
         <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Weekly TSS · last 12 weeks</h2>
         <WeeklyTSS weeks={weeks} totals={weeklyTotals} />
       </section>
 
       {/* --- TSS source mix --- */}
-      <section className="card mb-4">
+      <section className="card-glass mb-4">
         <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">TSS data sources</h2>
         <p className="text-xs text-[var(--muted)] mb-3">
           Which intensity signal each ride used. Better signals → more accurate TSS. Set FTP / LTHR in

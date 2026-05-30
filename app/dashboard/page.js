@@ -163,7 +163,7 @@ export default async function DashboardPage() {
 
 
         {/* Readiness — line + points */}
-        <div className="card">
+        <div className="card-glass">
           <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Readiness · last 7 days</h2>
           <ReadinessLine last7={last7} readinessByDay={readinessByDay} />
           <p className="text-[10px] text-[var(--muted)] mt-2">sleep + energy − soreness</p>
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* Training Load (TrainingPeaks-style) */}
-      <section className="card mb-4">
+      <section className="card-glass mb-4">
         <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
           <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">
             Training load · <a href="/training-load" className="text-[var(--accent)] normal-case font-normal">detail →</a>
@@ -214,7 +214,7 @@ export default async function DashboardPage() {
       </section>
 
       {todayCheckin && (
-        <section className="card mb-4">
+        <section className="card-glass mb-4">
           <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Today's check-in</h2>
           <div className="grid grid-cols-3 gap-2">
             <GaugeDial label="Sleep"    value={todayCheckin.sleep}    />
@@ -228,7 +228,7 @@ export default async function DashboardPage() {
       )}
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div className="card">
+        <div className="card-glass">
           <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Top trails · last 30d</h2>
           {topTrails.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">No trail-linked rides yet.</p>
@@ -453,7 +453,7 @@ function DistanceChart({ kmByDay, maxKm, totalKm }) {
   const y = (v) => padY + (1 - v / yMax) * (H - padY - padBottom);
 
   return (
-    <div className="card">
+    <div className="card-glass">
       <div className="flex items-baseline justify-between mb-3">
         <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">Distance · last 7 days</h2>
         <div className="text-xs">
