@@ -109,32 +109,47 @@ html, body {
   drop shadow so the card lifts off the page.
 */
 /*
-  Glass variant — no backdrop blur (needs content behind to read as glass,
-  which a uniform page doesn't provide). Instead, fakes a lit-glass-tile feel
-  with internal highlights: top sheen, rim highlights on top + left,
-  dark line on bottom + right for depth, and a stronger drop shadow for lift.
-  The base panel stays solid so chart gradients keep their punch.
+  Glass variant — a frosted-surface look that works without needing varied
+  background content. Layers (top to bottom):
+    1. Fine SVG noise grain — reads as ground/frosted glass texture
+    2. Top sheen gradient — light catching the upper edge
+    3. Solid panel base — keeps chart colors / gradients true
+  Plus: top + bottom rim highlights for a "lit tile" depth.
 */
 .card-glass {
+  position: relative;
   background:
-    /* Top sheen — subtle light wash */
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 35%),
-    /* Solid panel base */
+    /* Tiny SVG noise grain @ ~6% opacity — the "frost" */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    /* Top sheen — light from above */
+    linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, transparent 40%),
+    /* Solid panel base — keeps bar/gauge colors punchy */
     var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
   padding: 18px;
   box-shadow:
     /* deeper drop shadow lifts it off the page */
     0 10px 28px rgba(0, 0, 0, 0.40),
     /* top rim highlight — the lit edge */
-    inset 0 1px 0 rgba(255, 255, 255, 0.20),
-    /* bottom dark line — opposite edge in shadow */
-    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
-    /* faint left rim highlight */
-    inset 1px 0 0 rgba(255, 255, 255, 0.05),
-    /* faint right depth */
-    inset -1px 0 0 rgba(0, 0, 0, 0.10);
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    /* bottom dark line — depth */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Thin sheen sliver along the top of the glass — the rim catching the light. */
+.card-glass::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 16px; right: 16px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.40) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
 @media (max-width: 640px) {

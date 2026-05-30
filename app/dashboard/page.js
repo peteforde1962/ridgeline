@@ -311,45 +311,48 @@ function MiniMetric({ label, v, invert }) {
   );
 }
 
-// Semi-circular gauge dial.
+// Semi-circular gauge dial — minimal, in keeping with the rest of the site.
+// Thin arc, slim needle, restrained color, value typeset rather than blocky.
 function GaugeDial({ label, value, max = 10, invert = false }) {
-  const W = 160, H = 110, cx = W / 2, cy = H - 18, r = 56;
+  const W = 160, H = 100, cx = W / 2, cy = H - 14, r = 56;
   const t = Math.min(1, Math.max(0, value / max));
   const angle = Math.PI - t * Math.PI; // π (left) → 0 (right)
 
-  // Tier-based color
+  // Tier-based color — muted versions to match the site's palette.
   const goodVal = invert ? value <= 3 : value >= 8;
   const badVal  = invert ? value >= 8 : value <= 3;
-  const color   = goodVal ? "#5cb85c" : badVal ? "#d9534f" : "#f0ad4e";
+  const color   = goodVal ? "#7fb582" : badVal ? "#d6857f" : "var(--accent)";
 
   const x1 = cx + r * Math.cos(Math.PI),  y1 = cy - r * Math.sin(Math.PI);
   const x2 = cx + r * Math.cos(0),         y2 = cy - r * Math.sin(0);
   const fx = cx + r * Math.cos(angle),     fy = cy - r * Math.sin(angle);
-  const nx = cx + (r - 4) * Math.cos(angle), ny = cy - (r - 4) * Math.sin(angle);
+  const nx = cx + (r - 3) * Math.cos(angle), ny = cy - (r - 3) * Math.sin(angle);
 
   return (
     <div className="flex flex-col items-center">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
-        {/* background arc */}
+        {/* background arc — thin, low-contrast */}
         <path
           d={`M${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
-          fill="none" stroke="var(--bg2)" strokeWidth="11" strokeLinecap="round"
+          fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="4" strokeLinecap="round"
         />
-        {/* filled arc */}
+        {/* filled arc — same thin stroke for consistency */}
         <path
           d={`M${x1} ${y1} A ${r} ${r} 0 0 1 ${fx} ${fy}`}
-          fill="none" stroke={color} strokeWidth="11" strokeLinecap="round"
+          fill="none" stroke={color} strokeWidth="4" strokeLinecap="round"
         />
-        {/* needle */}
-        <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="var(--text)" strokeWidth="2" strokeLinecap="round" />
-        <circle cx={cx} cy={cy} r="4" fill="var(--text)" />
-        {/* value text */}
-        <text x={cx} y={cy - 14} textAnchor="middle" fontSize="22" fontWeight="800" fill={color}>{value}</text>
-        {/* end-labels */}
-        <text x={x1 - 4} y={y1 + 12} textAnchor="middle" fontSize="8" fill="var(--muted)">{invert ? "best" : "worst"}</text>
-        <text x={x2 + 4} y={y2 + 12} textAnchor="middle" fontSize="8" fill="var(--muted)">{invert ? "worst" : "best"}</text>
+        {/* slim needle */}
+        <line x1={cx} y1={cy} x2={nx} y2={ny}
+              stroke="var(--muted)" strokeWidth="1.25" strokeLinecap="round" opacity="0.85" />
+        {/* small dot at hub */}
+        <circle cx={cx} cy={cy} r="2" fill={color} />
+        {/* value text — restrained, lighter weight */}
+        <text x={cx} y={cy - 16} textAnchor="middle"
+              fontSize="20" fontWeight="700" fill="var(--text)" letterSpacing="-0.5">
+          {value}<tspan fontSize="11" fill="var(--muted)" fontWeight="500"> / {max}</tspan>
+        </text>
       </svg>
-      <div className="text-[11px] uppercase tracking-wide text-[var(--muted)] font-bold -mt-1">{label}</div>
+      <div className="text-[10px] uppercase tracking-wider text-[var(--muted)] font-semibold -mt-2">{label}</div>
     </div>
   );
 }
