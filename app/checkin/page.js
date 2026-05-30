@@ -1,8 +1,11 @@
 // /checkin — daily body check-in.
 // Server-renders: load today's check-in (if any) + recent history, then hand off to the form.
 
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { todayDateInTz } from "@/lib/plan";
 import CheckinForm from "@/components/CheckinForm";
 
 export default async function CheckinPage() {
@@ -10,7 +13,12 @@ export default async function CheckinPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const today = new Date().toISOString().slice(0, 10);
+  // Use the user's stored IANA timezone so this matches the dashboard's
+  // "today" date. UTC vs local mismatch is the most common cause of
+  // "I saved a check-in but the dashboard still shows the old one".
+  const { data: profile } = await supabase
+    .from("profiles").select("timezone").eq("id", user.id).single();
+  const today = todayDateInTz(profile?.timezone);
 
   // Today's existing check-in (if any)
   const { data: todayCheckin } = await supabase
@@ -50,7 +58,7 @@ export default async function CheckinPage() {
       </p>
 
       <div className="mb-6">
-        <CheckinForm userId={user.id} todayCheckin={todayCheckin} />
+        <CheckinForm userId={user.id} todayCheckin={todayCheckin} today={today} />
       </div>
 
       <section className="card">

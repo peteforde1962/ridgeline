@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function CheckinForm({ userId, todayCheckin }) {
+export default function CheckinForm({ userId, todayCheckin, today }) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -31,13 +31,15 @@ export default function CheckinForm({ userId, todayCheckin }) {
     e.preventDefault();
     setSaving(true); setError(""); setSuccess("");
 
-    const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+    // Use the date the server computed in the user's IANA timezone. Falls
+    // back to UTC only if the parent didn't pass one (legacy callers).
+    const dateKey = today || new Date().toISOString().slice(0, 10);
 
     // upsert = insert or update the row keyed by (user_id, date).
     const { error } = await supabase
       .from("check_ins")
       .upsert(
-        { user_id: userId, date: today, sleep, soreness, energy, notes },
+        { user_id: userId, date: dateKey, sleep, soreness, energy, notes },
         { onConflict: "user_id,date" }
       );
 
