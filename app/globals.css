@@ -32,6 +32,13 @@
 html, body {
   height: 100%;
   background:
+    /* soft peach glow upper-right */
+    radial-gradient(600px 400px at 85%  5%, rgba(248, 182, 166, 0.18) 0%, transparent 60%),
+    /* cyan glow lower-left  */
+    radial-gradient(700px 500px at 10% 90%, rgba(95, 167, 196, 0.22) 0%, transparent 60%),
+    /* warm wash mid */
+    radial-gradient(900px 600px at 55% 50%, rgba(240, 173, 78, 0.10) 0%, transparent 70%),
+    /* base teal gradient (existing) */
     radial-gradient(1400px 700px at 70% -10%, #1a5c70 0%, var(--bg) 60%) fixed;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -109,19 +116,38 @@ html, body {
   drop shadow so the card lifts off the page.
 */
 .card-glass {
+  position: relative;
+  /* Much more translucent — the backdrop blur needs to show through. */
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.06) 0%,
-    rgba(38, 42, 43, 0.55) 100%
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(38, 42, 43, 0.22) 100%
   );
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
   padding: 18px;
-  backdrop-filter: blur(14px) saturate(120%);
-  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
   box-shadow:
-    0 6px 22px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 10px 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),    /* top frosted highlight */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18);          /* bottom dark line for depth */
+}
+
+/* Subtle sheen sliver along the top of the glass — sells the effect. */
+.card-glass::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 12px; right: 12px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  border-radius: 1px;
 }
 
 @media (max-width: 640px) {

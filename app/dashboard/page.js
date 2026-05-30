@@ -311,7 +311,8 @@ function MiniMetric({ label, v, invert }) {
   );
 }
 
-// Semi-circular gauge dial.
+// Semi-circular gauge dial — glow on the arc + a thicker needle with a
+// drop-shadow tail and a colored hub. Pops on the glass card.
 function GaugeDial({ label, value, max = 10, invert = false }) {
   const W = 160, H = 110, cx = W / 2, cy = H - 18, r = 56;
   const t = Math.min(1, Math.max(0, value / max));
@@ -327,24 +328,55 @@ function GaugeDial({ label, value, max = 10, invert = false }) {
   const fx = cx + r * Math.cos(angle),     fy = cy - r * Math.sin(angle);
   const nx = cx + (r - 4) * Math.cos(angle), ny = cy - (r - 4) * Math.sin(angle);
 
+  // Unique ids per gauge so SVG defs (filter, gradient) don't collide on the page.
+  const uid = label.replace(/\s+/g, "_");
+
   return (
     <div className="flex flex-col items-center">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
-        {/* background arc */}
-        <path
-          d={`M${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
-          fill="none" stroke="var(--bg2)" strokeWidth="11" strokeLinecap="round"
-        />
-        {/* filled arc */}
-        <path
-          d={`M${x1} ${y1} A ${r} ${r} 0 0 1 ${fx} ${fy}`}
-          fill="none" stroke={color} strokeWidth="11" strokeLinecap="round"
-        />
-        {/* needle */}
-        <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="var(--text)" strokeWidth="2" strokeLinecap="round" />
-        <circle cx={cx} cy={cy} r="4" fill="var(--text)" />
+        <defs>
+          {/* Glow filter — feGaussianBlur + merge with source so the original shape stays sharp on top of a soft glow. */}
+          <filter id={`glow-${uid}`} x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          {/* Left-to-right opacity gradient gives the arc a subtle "build-up" feel. */}
+          <linearGradient id={`arc-${uid}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor={color} stopOpacity="0.55" />
+            <stop offset="100%" stopColor={color} stopOpacity="1" />
+          </linearGradient>
+        </defs>
+
+        {/* background arc — darker so the filled portion contrasts more on glass */}
+        <path d={`M${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
+              fill="none" stroke="rgba(0, 0, 0, 0.40)" strokeWidth="12" strokeLinecap="round" />
+
+        {/* filled arc with glow */}
+        <path d={`M${x1} ${y1} A ${r} ${r} 0 0 1 ${fx} ${fy}`}
+              fill="none" stroke={`url(#arc-${uid})`} strokeWidth="12" strokeLinecap="round"
+              filter={`url(#glow-${uid})`} />
+
+        {/* Needle drop-shadow tail (drawn first, behind) */}
+        <line x1={cx} y1={cy} x2={nx} y2={ny}
+              stroke="rgba(0, 0, 0, 0.45)" strokeWidth="5" strokeLinecap="round" />
+        {/* Needle — thicker, sharp on top */}
+        <line x1={cx} y1={cy} x2={nx} y2={ny}
+              stroke="var(--text)" strokeWidth="3" strokeLinecap="round" />
+
+        {/* Center hub — colored ring + white dome on top */}
+        <circle cx={cx} cy={cy} r="8" fill={color} opacity="0.7" />
+        <circle cx={cx} cy={cy} r="5.5" fill="var(--text)" />
+        <circle cx={cx} cy={cy} r="2"   fill={color} />
+
         {/* value text */}
-        <text x={cx} y={cy - 14} textAnchor="middle" fontSize="22" fontWeight="800" fill={color}>{value}</text>
+        <text x={cx} y={cy - 14} textAnchor="middle"
+              fontSize="22" fontWeight="800" fill={color}
+              style={{ filter: `drop-shadow(0 1px 2px rgba(0,0,0,0.45))` }}>
+          {value}
+        </text>
         {/* end-labels */}
         <text x={x1 - 4} y={y1 + 12} textAnchor="middle" fontSize="8" fill="var(--muted)">{invert ? "best" : "worst"}</text>
         <text x={x2 + 4} y={y2 + 12} textAnchor="middle" fontSize="8" fill="var(--muted)">{invert ? "worst" : "best"}</text>
