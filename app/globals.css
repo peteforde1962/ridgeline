@@ -183,34 +183,107 @@ th, td { padding: 10px 8px; }
   body { padding-left: 220px; }
 }
 
+/*
+  Mobile bottom tab bar — taller, more translucent, with stronger backdrop blur
+  so it reads as floating glass over the page content below.
+*/
 .tabbar {
   position: fixed;
   left: 0; right: 0; bottom: 0;
   display: none;
   z-index: 50;
-  background: rgba(38, 42, 43, 0.97);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid var(--line);
-  padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+  background: rgba(20, 40, 48, 0.65);   /* deep teal at 65% — clearly translucent */
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.30);
+  padding: 12px 8px calc(12px + env(safe-area-inset-bottom));
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
 }
-.tabbar a {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 6px 4px;
+.tabbar a, .tabbar button.tabbar-more {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 4px;
   color: var(--muted);
   font-size: 11px;
   font-weight: 600;
   text-decoration: none;
-  border-radius: 8px;
+  border-radius: 10px;
   text-align: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.1s ease, background 0.1s ease;
 }
-.tabbar a.active {
+.tabbar a.active, .tabbar button.tabbar-more.active {
   color: var(--accent);
   background: rgba(248, 182, 166, 0.15);
 }
-.tabbar a .ico { font-size: 18px; line-height: 1; }
 @media (max-width: 768px) {
   .tabbar { display: grid; }
+}
+
+/*
+  "More" bottom sheet — slides up over the tab bar with the secondary nav.
+*/
+.tabbar-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 55;
+  animation: tabbarFade 0.18s ease-out;
+}
+.tabbar-sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 60;
+  background: rgba(20, 40, 48, 0.85);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px 18px 0 0;
+  padding: 14px 16px calc(20px + env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.45);
+  animation: tabbarSlideUp 0.22s ease-out;
+}
+.tabbar-sheet-handle {
+  width: 38px; height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.25);
+  margin: 0 auto 14px;
+}
+.tabbar-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.tabbar-sheet-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  min-height: 74px;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.tabbar-sheet-tile.active {
+  color: var(--accent);
+  background: rgba(248, 182, 166, 0.15);
+  border-color: rgba(248, 182, 166, 0.35);
+}
+.tabbar-sheet-tile:active { background: rgba(255, 255, 255, 0.10); }
+
+@keyframes tabbarFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes tabbarSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
