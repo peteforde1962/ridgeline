@@ -79,7 +79,11 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
   async function setTweakOpt(opt) { setTweak(opt); await persist({ tweak: opt }); }
   async function swapType(newType) { setSwappedTo(newType); setShowSwap(false); await persist({ swapped_to: newType }); }
 
-  async function generateWorkout() {
+  const [workoutSource, setWorkoutSource] = useState(stored?.ai_workout ? "cached" : null);
+
+  // showWorkout: default load — pulls from the library (instant, on-brand) or returns cached.
+  // regenerate=true forces a fresh AI call with a type-strict prompt.
+  async function showWorkout({ regenerate = false } = {}) {
     setAiBusy(true); setAiOpen(true);
     try {
       const res = await fetch("/api/plan/workout-detail", {
@@ -89,12 +93,17 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
           weekIndex, dayIndex, sessionIdx,
           sessionType: effectiveType,
           sessionName: session.name,
-          force: !!aiWorkout,
+          phaseName: session.phase,
+          regenerate,
         }),
       });
       const data = await res.json();
-      if (data.workout) setAiWorkout(data.workout);
-      else if (data.error) alert(data.error);
+      if (data.workout) {
+        setAiWorkout(data.workout);
+        setWorkoutSource(data.source);
+      } else if (data.error) {
+        alert(data.error);
+      }
     } catch (e) { alert("Failed: " + e.message); }
     setAiBusy(false);
   }
@@ -150,11 +159,11 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
           style={{ padding: "5px 10px", fontSize: 12 }}>
           🔄 Change type
         </button>
-        {/* AI workout button — only for "trainable" types */}
+        {/* Workout details button — auto-populates from the library by default */}
         {effectiveType !== "rest" && (
-          <button onClick={generateWorkout} disabled={aiBusy} className="btn-ghost text-xs ml-auto"
+          <button onClick={() => showWorkout()} disabled={aiBusy} className="btn-ghost text-xs ml-auto"
             style={{ padding: "5px 10px" }}>
-            {aiBusy ? "Generating…" : aiWorkout ? "Show workout details" : "🤖 Get workout from Coach"}
+            {aiBusy ? "Loading…" : aiWorkout ? "Show workout" : "Show workout"}
           </button>
         )}
         {/* Only show View Ride for actual ride sessions */}
@@ -188,17 +197,93 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
       )}
 
       {aiOpen && aiWorkout && (
-        <div className="mt-3 p-3 rounded-lg" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">Coach-generated workout</span>
+        <div className="mt-3 p-4 rounded-lg" style={{ background: "var(--bg2)", border: "1px solid var(--line)" }}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">
+              {workoutSource === "ai" || workoutSource === "ai-regenerate"
+                ? "Coach-generated workout"
+                : "Workout"}
+            </span>
             <button onClick={() => setAiOpen(false)} className="text-[var(--muted)] hover:text-[var(--text)] text-sm">Hide</button>
           </div>
-          <div className="text-sm whitespace-pre-wrap text-[var(--text)]">{aiWorkout}</div>
-          <button onClick={generateWorkout} disabled={aiBusy} className="btn-ghost text-xs mt-2" style={{ padding: "4px 10px" }}>
-            🔄 Regenerate
+          <WorkoutMarkdown text={aiWorkout} />
+          <button onClick={() => showWorkout({ regenerate: true })} disabled={aiBusy}
+                  className="btn-ghost text-xs mt-3" style={{ padding: "4px 10px" }}>
+            {aiBusy ? "Regenerating…" : "🤖 Regenerate with Coach AI"}
           </button>
         </div>
       )}
     </div>
   );
+}
+
+// Tiny inline markdown renderer — handles headings, **bold**, _italic_, bullets,
+// and [link](url). Keeps the workout panel on-brand without an extra library.
+function WorkoutMarkdown({ text }) {
+  const lines = (text || "").split("\n");
+  const elements = [];
+  lines.forEach((raw, i) => {
+    const line = raw.trimEnd();
+    if (!line) { elements.push(<div key={i} className="h-2" />); return; }
+    if (line.startsWith("# ")) {
+      elements.push(<h4 key={i} className="text-base font-bold text-[var(--text)] mt-1 mb-1">{inline(line.slice(2))}</h4>);
+    } else if (line.startsWith("**") && line.endsWith("**")) {
+      elements.push(<div key={i} className="text-xs font-bold uppercase tracking-wide text-[var(--accent2,#fccabb)] mt-2 mb-1">{line.slice(2, -2)}</div>);
+    } else if (line.startsWith("• ") || line.startsWith("- ")) {
+      elements.push(
+        <div key={i} className="flex gap-2 text-sm text-[var(--text)]">
+          <span className="text-[var(--accent)]">•</span>
+          <span className="flex-1">{inline(line.slice(2))}</span>
+        </div>
+      );
+    } else {
+      elements.push(<p key={i} className="text-sm text-[var(--text)]">{inline(line)}</p>);
+    }
+  });
+  return <div className="space-y-0.5">{elements}</div>;
+
+  function inline(s) {
+    // Handle **bold**, _italic_, and [text](url) — naive but safe for our markdown.
+    const parts = [];
+    let i = 0, key = 0;
+    const push = (chunk) => { if (chunk) parts.push(<span key={key++}>{chunk}</span>); };
+    while (i < s.length) {
+      // [text](url)
+      if (s[i] === "[") {
+        const close = s.indexOf("](", i);
+        const end = close > 0 ? s.indexOf(")", close) : -1;
+        if (close > 0 && end > 0) {
+          const text = s.slice(i + 1, close);
+          const url  = s.slice(close + 2, end);
+          parts.push(<a key={key++} href={url} className="text-[var(--accent)] font-semibold">{text}</a>);
+          i = end + 1; continue;
+        }
+      }
+      // **bold**
+      if (s[i] === "*" && s[i + 1] === "*") {
+        const close = s.indexOf("**", i + 2);
+        if (close > 0) {
+          parts.push(<strong key={key++} className="text-[var(--text)] font-bold">{s.slice(i + 2, close)}</strong>);
+          i = close + 2; continue;
+        }
+      }
+      // _italic_
+      if (s[i] === "_") {
+        const close = s.indexOf("_", i + 1);
+        if (close > 0) {
+          parts.push(<em key={key++} className="text-[var(--muted)] italic">{s.slice(i + 1, close)}</em>);
+          i = close + 1; continue;
+        }
+      }
+      // Plain run — find next special
+      let next = s.length;
+      for (const ch of ["[", "*", "_"]) {
+        const idx = s.indexOf(ch, i);
+        if (idx >= 0 && idx < next) next = idx;
+      }
+      push(s.slice(i, next));
+      i = next;
+    }
+    return parts;
+  }
 }
