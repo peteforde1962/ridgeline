@@ -120,79 +120,70 @@ export default async function TrailsPage() {
         </section>
       )}
 
-      {/* Conditions feed */}
-      {riddenTrails.length > 0 && (
-        <section className="card mb-6">
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h2 className="text-lg font-bold">Trail conditions</h2>
-            <span className="text-xs text-[var(--muted)]">Community reports — most recent per trail</span>
-          </div>
-          <div className="space-y-2">
-            {riddenTrails.slice(0, 10).map((t) => (
-              <div key={t.id} className="flex flex-wrap items-center gap-3 py-2 border-b border-[var(--line)] last:border-0">
-                <div className="flex-1 min-w-[160px]">
-                  <a href={`/trails/${t.id}`} className="font-semibold hover:underline">{t.name}</a>
-                  {t.condition ? (
-                    <div className="text-xs text-[var(--muted)] mt-0.5">
-                      {t.condition.notes && <span>"{t.condition.notes}" — </span>}
-                      <span>{t.condition.reporter_name || "anon"} · {t.condition.daysAgo}d ago</span>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-[var(--muted)] mt-0.5">No reports yet</div>
+      {/* Two-column rolladex: trail conditions + recent activities */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Trail conditions rolladex */}
+        {riddenTrails.length > 0 && (
+          <div className="rolladex">
+            <div className="rolladex-head">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">Trail conditions</h2>
+              <span className="text-[10px] text-[var(--muted)]">community reports</span>
+            </div>
+            <div className="rolladex-body">
+              {riddenTrails.map((t) => (
+                <div key={t.id} className="rolladex-row">
+                  <div className="flex-1 min-w-0">
+                    <a href={`/trails/${t.id}`} className="font-semibold text-sm hover:underline block truncate">{t.name}</a>
+                    {t.condition ? (
+                      <div className="text-[11px] text-[var(--muted)] truncate">
+                        {t.condition.notes ? `"${t.condition.notes}"` : "—"} · {t.condition.daysAgo}d ago
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-[var(--muted)]">No reports</div>
+                    )}
+                  </div>
+                  {t.condition && (
+                    <ConditionBadge status={t.condition.status} daysAgo={t.condition.daysAgo} title={t.condition.notes} />
                   )}
+                  <AddConditionForm trailName={t.name} region={t.region} />
                 </div>
-                {t.condition && (
-                  <ConditionBadge status={t.condition.status} daysAgo={t.condition.daysAgo} title={t.condition.notes} />
-                )}
-                <AddConditionForm trailName={t.name} region={t.region} />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Recent rides */}
-      <section className="card mb-6">
-        <h2 className="text-lg font-bold mb-3">Recent rides</h2>
-        {!rides || rides.length === 0 ? (
-          <p className="text-[var(--muted)] text-sm">No rides logged yet. Sync from Strava or tap "Log a ride".</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-[var(--muted)] text-xs uppercase tracking-wide">
-                  <th className="text-left p-2">Date</th>
-                  <th className="text-left p-2">Type</th>
-                  <th className="text-left p-2">Distance</th>
-                  <th className="text-left p-2">Elev</th>
-                  <th className="text-left p-2">Time</th>
-                  <th className="text-left p-2">Trails</th>
-                  <th className="text-left p-2">Notes</th>
-                  <th className="text-right p-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {rides.map((r) => {
-                  const trailCount = r.ride_trails?.length || 0;
-                  return (
-                    <tr key={r.id} className="border-t border-[var(--line)] hover:bg-[var(--panel2)] cursor-pointer">
-                      <td className="p-2 whitespace-nowrap"><a href={`/rides/${r.id}`} className="block">{r.date}</a></td>
-                      <td className="p-2"><a href={`/rides/${r.id}`} className="block"><ActivityBadge sportType={r.sport_type} kind={r.activity_kind} /></a></td>
-                      <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.km ? `${r.km} km` : "—"}</a></td>
-                      <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.elev_m ? `${r.elev_m} m` : "—"}</a></td>
-                      <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.minutes} min</a></td>
-                      <td className="p-2"><a href={`/rides/${r.id}`} className="block">{trailCount > 0 ? `${trailCount} →` : "—"}</a></td>
-                      <td className="p-2 text-[var(--muted)] max-w-xs truncate"><a href={`/rides/${r.id}`} className="block">{r.notes || ""}</a></td>
-                      <td className="p-2 text-right">
-                        <DeleteRow table="rides" id={r.id} confirm="Delete this activity?" />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Recent activities rolladex */}
+        <div className="rolladex">
+          <div className="rolladex-head">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">Recent activities</h2>
+            <span className="text-[10px] text-[var(--muted)]">{rides?.length || 0} total · scroll</span>
+          </div>
+          <div className="rolladex-body">
+            {!rides || rides.length === 0 ? (
+              <p className="text-[var(--muted)] text-sm p-3">No activity yet. Sync from Strava or tap "Log activity".</p>
+            ) : (
+              rides.map((r) => {
+                const trailCount = r.ride_trails?.length || 0;
+                const activityTitle = (r.notes || "").split(" · ")[0]?.trim() || "Activity";
+                return (
+                  <a key={r.id} href={`/rides/${r.id}`} className="rolladex-row hover:opacity-90 transition-opacity">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <ActivityBadge sportType={r.sport_type} kind={r.activity_kind} />
+                        <span className="text-[10px] text-[var(--muted)]">{r.date.slice(5)}</span>
+                      </div>
+                      <div className="font-semibold text-sm truncate">{activityTitle}</div>
+                      <div className="text-[11px] text-[var(--muted)] truncate">
+                        {r.km ? `${r.km} km · ` : ""}{r.minutes} min{r.elev_m ? ` · ${r.elev_m} m` : ""}{trailCount > 0 ? ` · ${trailCount} trails` : ""}
+                      </div>
+                    </div>
+                    <DeleteRow table="rides" id={r.id} confirm="Delete this activity?" />
+                  </a>
+                );
+              })
+            )}
+          </div>
+        </div>
       </section>
     </main>
   );
