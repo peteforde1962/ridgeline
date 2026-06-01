@@ -5,6 +5,7 @@
 // so it can be auto-selected on the form.
 
 import { useState, useEffect, useMemo } from "react";
+import Icon from "@/lib/icons";
 
 // Same region list as /trails/discover.
 const DEFAULT_REGIONS = [
@@ -88,7 +89,7 @@ export default function GlobalTrailSearchModal({ open, onClose, onImported }) {
     >
       <div className="card max-w-2xl w-full max-h-[85vh] flex flex-col" style={{ background: "var(--panel)" }}>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold">🌍 Search worldwide trails</h2>
+          <h2 className="text-lg font-bold flex items-center gap-2"><Icon name="globe" size={18} /> Search worldwide trails</h2>
           <button onClick={onClose} className="text-[var(--muted)] hover:text-[var(--text)] text-2xl leading-none">×</button>
         </div>
         <p className="text-sm text-[var(--muted)] mb-4">

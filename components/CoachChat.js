@@ -4,6 +4,7 @@
 // Suggestion chips adapt based on user state passed in from the server.
 
 import { useState, useRef, useEffect } from "react";
+import Icon from "@/lib/icons";
 
 export default function CoachChat({ context }) {
   // context: { hasCheckinToday, todayIsRest, raceWithinWeeks, hasNoRides, behindThisWeek, name }
@@ -91,11 +92,11 @@ export default function CoachChat({ context }) {
             <strong>Coach AI</strong>
             <span className="text-[var(--muted)] ml-2 text-xs">
               {source.startsWith("local-fallback")
-                ? "⚙️ Local fallback"
+                ? "Local fallback"
                 : source.startsWith("anthropic-sonnet")
-                ? "🧠 Sonnet (deep)"
+                ? <span className="inline-flex items-center gap-1"><Icon name="brain" size={12} /> Sonnet (deep)</span>
                 : source.startsWith("anthropic-haiku")
-                ? "⚡ Haiku (fast)"
+                ? <span className="inline-flex items-center gap-1"><Icon name="bolt" size={12} /> Haiku (fast)</span>
                 : "Ready"}
             </span>
           </div>
@@ -107,8 +108,8 @@ export default function CoachChat({ context }) {
               className="bg-transparent border border-[var(--line)] rounded px-2 py-1 text-xs"
               disabled={busy}
             >
-              <option value="haiku">⚡ Fast (Haiku)</option>
-              <option value="sonnet">🧠 Deep (Sonnet)</option>
+              <option value="haiku">Fast (Haiku)</option>
+              <option value="sonnet">Deep (Sonnet)</option>
             </select>
             {messages.length > 0 && (
               <button onClick={() => { setMessages([]); setSource(""); }} className="btn-ghost text-xs" style={{ padding: "4px 8px" }}>
@@ -144,7 +145,9 @@ export default function CoachChat({ context }) {
                     : { background: "var(--panel)", border: "1px solid var(--line)", marginRight: "10%" }
                 }
               >
-                <div className="text-xs text-[var(--muted)] mb-1">{m.role === "user" ? "You" : "🤖 Coach"}</div>
+                <div className="text-xs text-[var(--muted)] mb-1 flex items-center gap-1">
+                  {m.role === "user" ? "You" : <><Icon name="bolt" size={11} /> Coach</>}
+                </div>
                 <div style={{ whiteSpace: "pre-wrap" }}>
                   {m.content}
                   {busy && i === messages.length - 1 && m.role === "assistant" && (

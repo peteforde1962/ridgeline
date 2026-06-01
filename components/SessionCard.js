@@ -11,6 +11,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { sessionLabel, sessionTagClass, scaleSessionName } from "@/lib/plan";
+import Icon from "@/lib/icons";
 
 const SWAPPABLE_TYPES = ["ride", "strength", "yoga", "run", "rope", "rest"];
 
@@ -167,9 +168,9 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
           className="btn-ghost" style={{ padding: "5px 10px", fontSize: 12 }}>
           {isSkipped ? "Un-skip" : "Skip"}
         </button>
-        <button onClick={() => setShowSwap(!showSwap)} disabled={busy} className="btn-ghost"
+        <button onClick={() => setShowSwap(!showSwap)} disabled={busy} className="btn-ghost inline-flex items-center gap-1"
           style={{ padding: "5px 10px", fontSize: 12 }}>
-          🔄 Change type
+          <Icon name="swap" size={13} /> Change type
         </button>
         {/* Workout details button — auto-populates from the library by default */}
         {effectiveType !== "rest" && (
@@ -220,8 +221,8 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
           </div>
           <WorkoutMarkdown text={aiWorkout} />
           <button onClick={() => showWorkout({ regenerate: true })} disabled={aiBusy}
-                  className="btn-ghost text-xs mt-3" style={{ padding: "4px 10px" }}>
-            {aiBusy ? "Regenerating…" : "🤖 Regenerate with Coach AI"}
+                  className="btn-ghost text-xs mt-3 inline-flex items-center gap-1.5" style={{ padding: "4px 10px" }}>
+            <Icon name="spark" size={13} /> {aiBusy ? "Regenerating…" : "Regenerate with Coach AI"}
           </button>
         </div>
       )}

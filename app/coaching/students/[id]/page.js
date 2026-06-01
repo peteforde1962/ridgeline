@@ -87,7 +87,10 @@ export default async function StudentDetail({ params }) {
       <PageHeader />
       <a href="/coaching" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">← All students</a>
 
-      <h1 className="text-3xl font-extrabold mt-2 mb-1">{studentName}</h1>
+      <div className="flex items-baseline justify-between gap-3 flex-wrap mt-2 mb-1">
+        <h1 className="text-3xl font-extrabold">{studentName}</h1>
+        <a href={`/coaching/students/${student.id}/plan`} className="btn-primary text-sm">View full plan →</a>
+      </div>
       <p className="text-[var(--muted)] mb-6">
         {student.preset} · {student.level} · {student.weekly_hours}h/week · {student.goal}
         {student.race_date && ` · race ${student.race_date}`}

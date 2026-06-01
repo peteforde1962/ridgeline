@@ -10,6 +10,7 @@ import StravaSyncResult from "@/components/StravaSyncResult";
 import TrailCloud from "@/components/TrailCloud";
 import ConditionBadge from "@/components/ConditionBadge";
 import AddConditionForm from "@/components/AddConditionForm";
+import Icon from "@/lib/icons";
 
 export default async function TrailsPage() {
   const supabase = createClient();
@@ -79,7 +80,7 @@ export default async function TrailsPage() {
         <h1 className="text-3xl font-extrabold">Trails & Rides</h1>
         <div className="flex gap-2 flex-wrap">
           <a href="/rides/new" className="btn-primary text-sm">+ Log a ride</a>
-          <a href="/trails/discover" className="btn-ghost text-sm">🌍 Discover trails</a>
+          <a href="/trails/discover" className="btn-ghost text-sm"><Icon name="globe" size={16} /> Discover trails</a>
         </div>
       </div>
       <p className="text-[var(--muted)] mb-6">
