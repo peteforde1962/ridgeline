@@ -11,6 +11,7 @@ import { trainingLoadSeries, currentLoad, formInterpretation } from "@/lib/train
 import PageHeader from "@/components/PageHeader";
 import CoachPrescribeWorkout from "@/components/CoachPrescribeWorkout";
 import CoachVideoUpload from "@/components/CoachVideoUpload";
+import ActivityBadge from "@/components/ActivityBadge";
 
 export default async function StudentDetail({ params }) {
   const supabase = createClient();
@@ -38,7 +39,7 @@ export default async function StudentDetail({ params }) {
     { data: planSessions },
   ] = await Promise.all([
     supabase.from("rides")
-      .select("id, date, km, minutes, elev_m, feel, notes, avg_hr, weighted_avg_watts, suffer_score")
+      .select("id, date, km, minutes, elev_m, feel, notes, sport_type, activity_kind, avg_hr, weighted_avg_watts, suffer_score")
       .eq("user_id", student.id)
       .gte("date", thirty)
       .order("date", { ascending: false }),
@@ -156,13 +157,14 @@ export default async function StudentDetail({ params }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[var(--muted)] text-xs uppercase tracking-wide">
-                  <th className="p-3">Date</th><th>Km</th><th>Min</th><th>Elev</th><th>HR / W</th><th>Feel</th><th className="pr-3">Notes</th>
+                  <th className="p-3">Date</th><th>Type</th><th>Km</th><th>Min</th><th>Elev</th><th>HR / W</th><th>Feel</th><th className="pr-3">Notes</th>
                 </tr>
               </thead>
               <tbody>
                 {rides.map((r) => (
                   <tr key={r.id} className="border-t border-[var(--line)]">
                     <td className="p-3"><a href={`/rides/${r.id}`} className="text-[var(--accent)]">{r.date.slice(5)}</a></td>
+                    <td><ActivityBadge sportType={r.sport_type} kind={r.activity_kind} /></td>
                     <td>{r.km || "—"}</td>
                     <td>{r.minutes || "—"}</td>
                     <td>{r.elev_m || "—"}</td>

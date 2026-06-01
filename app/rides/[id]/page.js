@@ -3,6 +3,7 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
+import ActivityBadge from "@/components/ActivityBadge";
 
 function formatTime(seconds) {
   if (seconds == null) return "—";
@@ -45,8 +46,11 @@ export default async function RideDetailPage({ params }) {
 
       <a href="/trails" className="text-sm text-[var(--muted)] hover:text-[var(--text)] mb-2 inline-block">← Trails &amp; Rides</a>
 
-      <h1 className="text-3xl font-extrabold mb-1">{ride.date}</h1>
-      <p className="text-[var(--muted)] mb-6">{ride.notes || "Ride details"}</p>
+      <div className="flex items-center gap-3 mb-1 flex-wrap">
+        <h1 className="text-3xl font-extrabold">{ride.date}</h1>
+        <ActivityBadge sportType={ride.sport_type} kind={ride.activity_kind} size="lg" />
+      </div>
+      <p className="text-[var(--muted)] mb-6">{ride.notes || "Activity details"}</p>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Stat label="Distance"   v={ride.km != null ? `${ride.km} km` : "—"} />

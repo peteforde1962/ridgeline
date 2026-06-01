@@ -11,6 +11,7 @@ import TrailCloud from "@/components/TrailCloud";
 import ConditionBadge from "@/components/ConditionBadge";
 import AddConditionForm from "@/components/AddConditionForm";
 import Icon from "@/lib/icons";
+import ActivityBadge from "@/components/ActivityBadge";
 
 export default async function TrailsPage() {
   const supabase = createClient();
@@ -21,7 +22,7 @@ export default async function TrailsPage() {
     supabase.from("trails").select("*").eq("user_id", user.id).order("name"),
     supabase
       .from("rides")
-      .select("id, date, km, elev_m, minutes, notes, ride_trails(trail_id, seconds_on_trail)")
+      .select("id, date, km, elev_m, minutes, notes, sport_type, activity_kind, ride_trails(trail_id, seconds_on_trail)")
       .eq("user_id", user.id)
       .order("date", { ascending: false }).limit(25),
     // Latest 50 condition reports (community-wide).
@@ -157,6 +158,7 @@ export default async function TrailsPage() {
               <thead>
                 <tr className="text-[var(--muted)] text-xs uppercase tracking-wide">
                   <th className="text-left p-2">Date</th>
+                  <th className="text-left p-2">Type</th>
                   <th className="text-left p-2">Distance</th>
                   <th className="text-left p-2">Elev</th>
                   <th className="text-left p-2">Time</th>
@@ -171,13 +173,14 @@ export default async function TrailsPage() {
                   return (
                     <tr key={r.id} className="border-t border-[var(--line)] hover:bg-[var(--panel2)] cursor-pointer">
                       <td className="p-2 whitespace-nowrap"><a href={`/rides/${r.id}`} className="block">{r.date}</a></td>
+                      <td className="p-2"><a href={`/rides/${r.id}`} className="block"><ActivityBadge sportType={r.sport_type} kind={r.activity_kind} /></a></td>
                       <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.km ? `${r.km} km` : "—"}</a></td>
                       <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.elev_m ? `${r.elev_m} m` : "—"}</a></td>
                       <td className="p-2"><a href={`/rides/${r.id}`} className="block">{r.minutes} min</a></td>
                       <td className="p-2"><a href={`/rides/${r.id}`} className="block">{trailCount > 0 ? `${trailCount} →` : "—"}</a></td>
                       <td className="p-2 text-[var(--muted)] max-w-xs truncate"><a href={`/rides/${r.id}`} className="block">{r.notes || ""}</a></td>
                       <td className="p-2 text-right">
-                        <DeleteRow table="rides" id={r.id} confirm="Delete this ride?" />
+                        <DeleteRow table="rides" id={r.id} confirm="Delete this activity?" />
                       </td>
                     </tr>
                   );

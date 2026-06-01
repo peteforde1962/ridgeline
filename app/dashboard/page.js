@@ -10,6 +10,7 @@ import { recoveryRecommendation } from "@/lib/recovery";
 import { trainingLoadSeries, currentLoad, formInterpretation } from "@/lib/training-load";
 import SignOutButton from "@/components/SignOutButton";
 import Icon from "@/lib/icons";
+import ActivityBadge from "@/components/ActivityBadge";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -31,7 +32,7 @@ export default async function DashboardPage() {
     { data: weekCheckins },
   ] = await Promise.all([
     supabase.from("check_ins").select("*").eq("user_id", user.id).eq("date", today).maybeSingle(),
-    supabase.from("rides").select("id, date, km, elev_m, minutes, notes, ride_trails(trails(name))").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: false }),
+    supabase.from("rides").select("id, date, km, elev_m, minutes, notes, sport_type, activity_kind, ride_trails(trails(name))").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: false }),
     supabase.from("rides").select("km, minutes, elev_m, date, ride_trails(trails(name))").eq("user_id", user.id).gte("date", thirtyDaysAgo),
     supabase.from("rides")
       .select("date, km, elev_m, minutes, avg_hr, avg_watts, weighted_avg_watts, suffer_score")
@@ -254,20 +255,21 @@ export default async function DashboardPage() {
         </div>
 
         <div className="card">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Recent rides</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Recent activity</h2>
           {(weekRides || []).length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">No rides in the last 7 days.</p>
+            <p className="text-sm text-[var(--muted)]">No activity in the last 7 days.</p>
           ) : (
             <ul className="space-y-2">
               {weekRides.slice(0, 5).map((r) => {
-                const trailName = r.ride_trails?.[0]?.trails?.name || r.notes?.split("·")[0]?.trim() || "Ride";
+                const trailName = r.ride_trails?.[0]?.trails?.name || r.notes?.split("·")[0]?.trim() || "Activity";
                 return (
-                  <li key={r.id} className="flex justify-between text-sm">
-                    <span>
-                      <span className="text-[var(--muted)] mr-2">{r.date.slice(5)}</span>
-                      <span className="font-semibold">{trailName}</span>
+                  <li key={r.id} className="flex justify-between text-sm gap-2">
+                    <span className="flex items-center gap-2 min-w-0 flex-1">
+                      <ActivityBadge sportType={r.sport_type} kind={r.activity_kind} />
+                      <span className="text-[var(--muted)]">{r.date.slice(5)}</span>
+                      <span className="font-semibold truncate">{trailName}</span>
                     </span>
-                    <span className="text-[var(--muted)]">{r.km}km · {r.minutes}min · {r.elev_m || 0}m</span>
+                    <span className="text-[var(--muted)] whitespace-nowrap">{r.km}km · {r.minutes}min · {r.elev_m || 0}m</span>
                   </li>
                 );
               })}
