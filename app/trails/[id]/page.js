@@ -63,7 +63,7 @@ export default async function TrailProfilePage({ params }) {
   return (
     <main className="min-h-screen p-6 max-w-4xl mx-auto">
       <PageHeader back="/trails" />
-      <a href="/trails" className="text-sm text-[var(--muted)] hover:text-[var(--text)] mb-2 inline-block">← Trails & Rides</a>
+      <a href="/trails" className="text-sm text-[var(--muted)] hover:text-[var(--text)] mb-2 inline-block">← Activities</a>
 
       {/* Header */}
       <div className="card mb-4" style={{ borderLeft: `4px solid ${diffColor}` }}>

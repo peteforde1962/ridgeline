@@ -17,9 +17,9 @@ export default async function NewRidePage() {
     <main className="min-h-screen p-6 max-w-3xl mx-auto">
       <PageHeader back="/trails" />
 
-      <a href="/trails" className="text-sm text-[var(--muted)] hover:text-[var(--text)] mb-2 inline-block">← Trails & Rides</a>
+      <a href="/trails" className="text-sm text-[var(--muted)] hover:text-[var(--text)] mb-2 inline-block">← Activities</a>
 
-      <h1 className="text-3xl font-extrabold mb-1">Log a ride</h1>
+      <h1 className="text-3xl font-extrabold mb-1">Log an activity</h1>
       <p className="text-[var(--muted)] mb-6">
         Manual entry. For Strava users, rides import automatically — no need to log here.
       </p>

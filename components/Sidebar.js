@@ -40,7 +40,7 @@ const TOP = [
   { href: "/today",      label: "Today",       ico: ICONS.target },
   { href: "/plan",       label: "Plan",        ico: ICONS.cal },
   { href: "/checkin",    label: "Check-in",    ico: ICONS.heart },
-  { href: "/trails",     label: "Trails & Rides", ico: ICONS.bike },
+  { href: "/trails",     label: "Activities",  ico: ICONS.bike },
   { href: "/training-load", label: "Training load", ico: ICONS.chart },
   { href: "/coach",      label: "Coach AI",    ico: ICONS.bolt },
   { href: "/skills",     label: "Skills",      ico: ICONS.bars },

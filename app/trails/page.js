@@ -78,7 +78,7 @@ export default async function TrailsPage() {
       </header>
 
       <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
-        <h1 className="text-3xl font-extrabold">Trails & Activities</h1>
+        <h1 className="text-3xl font-extrabold">Activities</h1>
         <div className="flex gap-2 flex-wrap">
           <a href="/rides/new" className="btn-primary text-sm inline-flex items-center gap-1.5">
             <Icon name="plus" size={14} stroke="#1a2a30" /> Log activity
