@@ -5,6 +5,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
+import { STRAVA_API_BASE } from "@/lib/strava";
 
 export const runtime = "nodejs";
 
@@ -24,7 +25,7 @@ export async function POST(request) {
   const callbackUrl = `${url.origin}/api/strava/webhook`;
 
   // Ask Strava to subscribe.
-  const res = await fetch("https://www.strava.com/api/v3/push_subscriptions", {
+  const res = await fetch(`${STRAVA_API_BASE}/push_subscriptions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -59,7 +60,7 @@ export async function GET(request) {
     client_id:     process.env.STRAVA_CLIENT_ID,
     client_secret: process.env.STRAVA_CLIENT_SECRET,
   });
-  const res = await fetch(`https://www.strava.com/api/v3/push_subscriptions?${params}`);
+  const res = await fetch(`${STRAVA_API_BASE}/push_subscriptions?${params}`);
   const data = await res.json();
   return Response.json({ subscriptions: data });
 }
@@ -80,7 +81,7 @@ export async function DELETE(request) {
     client_id:     process.env.STRAVA_CLIENT_ID,
     client_secret: process.env.STRAVA_CLIENT_SECRET,
   });
-  const res = await fetch(`https://www.strava.com/api/v3/push_subscriptions/${sub.id}?${params}`, {
+  const res = await fetch(`${STRAVA_API_BASE}/push_subscriptions/${sub.id}?${params}`, {
     method: "DELETE",
   });
   if (!res.ok) {

@@ -1,7 +1,7 @@
 // POST /api/strava/sync — import activities, GPS-detect trails, write per-trail times.
 
 import { createClient } from "@/lib/supabase/server";
-import { ensureFreshToken, fetchAthleteActivities, activityToRide } from "@/lib/strava";
+import { ensureFreshToken, fetchAthleteActivities, activityToRide, STRAVA_API_BASE } from "@/lib/strava";
 import { detectTrailsForActivity } from "@/lib/trail-detection";
 import { buildPlan, rideToPlanIndex } from "@/lib/plan";
 
@@ -53,7 +53,7 @@ export async function POST(request) {
       // trail segments). Falls back gracefully if the call fails.
       let detailedActivity = activity;
       try {
-        const dRes = await fetch(`https://www.strava.com/api/v3/activities/${activity.id}?include_all_efforts=true`, {
+        const dRes = await fetch(`${STRAVA_API_BASE}/activities/${activity.id}?include_all_efforts=true`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (dRes.ok) detailedActivity = await dRes.json();

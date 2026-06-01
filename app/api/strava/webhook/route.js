@@ -1,7 +1,7 @@
 // /api/strava/webhook — auto-import + GPS detection + per-trail time.
 
 import { adminClient } from "@/lib/supabase/admin";
-import { ensureFreshToken, activityToRide } from "@/lib/strava";
+import { ensureFreshToken, activityToRide, STRAVA_API_BASE } from "@/lib/strava";
 import { detectTrailsForActivity } from "@/lib/trail-detection";
 import { buildPlan, rideToPlanIndex } from "@/lib/plan";
 
@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const STRAVA_API = "https://www.strava.com/api/v3";
+const STRAVA_API = STRAVA_API_BASE;
 
 export async function GET(request) {
   const url = new URL(request.url);

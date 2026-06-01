@@ -351,6 +351,7 @@ export default async function DocsPage() {
               <li><Code>RESEND_API_KEY</Code>, <Code>EMAIL_FROM</Code> (e.g. <Code>RidgeLine &lt;briefing@ridgeline-mtb.ca&gt;</Code>) — daily emails.</li>
               <li><Code>CRON_SECRET</Code> — Bearer header for the cron entry-point.</li>
               <li><Code>NEXT_PUBLIC_SITE_URL</Code> — used in OAuth callbacks + email links.</li>
+              <li><Code>STRAVA_API_BASE</Code> — optional. Defaults to <Code>https://www.strava.com/api/v3</Code>. Flip to <Code>https://www.api-v3.strava.com</Code> when Strava confirms the new host is live (mandatory by June 1, 2027). No code change needed — just update the env var and redeploy.</li>
             </List>
           </Section>
 
