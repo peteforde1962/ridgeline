@@ -12,29 +12,37 @@ export default function TrailGeometryBackfillButton() {
   const [log, setLog] = useState([]);
   const [done, setDone] = useState(false);
 
-  async function runOne() {
-    const res = await fetch("/api/admin/backfill-trail-geometry", { method: "POST" });
+  async function runOne(skipIds) {
+    const res = await fetch("/api/admin/backfill-trail-geometry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skipIds }),
+    });
     return res.json();
   }
 
   async function runUntilDone() {
     setBusy(true); setDone(false); setLog([]); setProgress(null);
-    const totals = { processed: 0, succeeded: 0, no_rides: 0, no_osm_match: 0, errors: 0 };
+    const totals = { processed: 0, succeeded: 0, no_anchor: 0, no_osm_match: 0, errors: 0 };
+    // Accumulate IDs of trails that failed so the next batch doesn't re-try them.
+    const skipIds = [];
     while (true) {
-      const r = await runOne();
+      const r = await runOne(skipIds);
       if (r.error) { setLog((l) => [...l, "⚠ " + r.error]); break; }
       totals.processed    += r.processed;
       totals.succeeded    += r.succeeded;
-      totals.no_rides     += r.no_rides;
-      totals.no_osm_match += r.no_osm_match;
+      totals.no_anchor    += r.no_anchor || 0;
+      totals.no_osm_match += r.no_osm_match || 0;
       totals.errors       += (r.errors?.length || 0);
+      // Track failed IDs so we don't keep hammering Overpass on the same names.
+      if (Array.isArray(r.failed_ids)) skipIds.push(...r.failed_ids);
       setProgress({ ...totals, remaining: r.remaining });
       setLog((l) => [
         ...l,
-        `Batch: ${r.succeeded}/${r.processed} filled · ${r.no_rides} no-anchor · ${r.no_osm_match} no-match · ${r.remaining} remaining`,
+        `Batch: ${r.succeeded}/${r.processed} filled · ${r.no_anchor} no-anchor · ${r.no_osm_match} no-match · ${r.remaining} remaining`,
       ]);
+      // Stop conditions: no more trails OR this batch had zero rows to work on.
       if (r.processed === 0 || r.remaining === 0) { setDone(true); break; }
-      // Polite spacing — Overpass is shared infrastructure.
       await new Promise((res) => setTimeout(res, 1500));
     }
     setBusy(false);
