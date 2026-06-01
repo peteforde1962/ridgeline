@@ -121,6 +121,9 @@ function gradientColor(pct) {
 
 export default function TrailProfileGraph({ trailId, name, lengthKm, elevM }) {
   const [revealed, setRevealed] = useState(false);
+  const [realProfile, setRealProfile] = useState(null);   // { samples, total_climb, total_descent }
+  const [fetching, setFetching] = useState(true);
+  const [source, setSource] = useState("estimated");      // 'real' | 'estimated' | 'no-geometry'
   const pathRef = useRef(null);
 
   // Bail out cleanly if we don't have enough data.
@@ -129,12 +132,67 @@ export default function TrailProfileGraph({ trailId, name, lengthKm, elevM }) {
   }
   const elev = elevM || Math.max(50, lengthKm * 20);
 
-  const { points, totalClimb, totalDescent, maxGradient, minGradient } = useMemo(
+  // Procedural fallback profile.
+  const proc = useMemo(
     () => generateProfile(lengthKm, elev, trailId || name),
     [trailId, name, lengthKm, elev]
   );
 
-  // Stroke-dashoffset reveal animation on mount.
+  // Try to fetch the real elevation profile (sampled DEM).
+  useEffect(() => {
+    let cancelled = false;
+    setFetching(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/trails/${trailId}/elevation`);
+        const data = await res.json();
+        if (cancelled) return;
+        if (data?.profile?.samples?.length > 1) {
+          setRealProfile(data.profile);
+          setSource("real");
+        } else {
+          setSource("estimated");
+        }
+      } catch {
+        if (!cancelled) setSource("estimated");
+      }
+      if (!cancelled) setFetching(false);
+    })();
+    return () => { cancelled = true; };
+  }, [trailId]);
+
+  // Choose which profile to render — real if available, else procedural.
+  const { points, totalClimb, totalDescent, maxGradient, minGradient } = useMemo(() => {
+    if (realProfile?.samples?.length > 1) {
+      // Convert real samples to the same point shape as procedural.
+      const pts = realProfile.samples.map((s, i, arr) => {
+        const prev = arr[Math.max(0, i - 1)];
+        const next = arr[Math.min(arr.length - 1, i + 1)];
+        const dxM = (next.km - prev.km) * 1000;
+        const dyM = next.elev - prev.elev;
+        const grad = dxM > 0 ? (dyM / dxM) * 100 : 0;
+        return { x: s.km, y: s.elev, gradient: grad };
+      });
+      // Shift so minimum elevation is 0 for cleaner visual.
+      const baseY = Math.min(...pts.map((p) => p.y));
+      for (const p of pts) p.y -= baseY;
+      let mx = 0, mn = 0;
+      for (const p of pts) {
+        if (p.gradient > mx) mx = p.gradient;
+        if (p.gradient < mn) mn = p.gradient;
+      }
+      return {
+        points: pts,
+        totalClimb: realProfile.total_climb,
+        totalDescent: realProfile.total_descent,
+        maxGradient: mx,
+        minGradient: mn,
+      };
+    }
+    return proc;
+  }, [realProfile, proc]);
+
+  // Stroke-dashoffset reveal animation on mount AND when source changes (real arrives).
   useEffect(() => {
     const p = pathRef.current;
     if (!p) return;
@@ -145,7 +203,7 @@ export default function TrailProfileGraph({ trailId, name, lengthKm, elevM }) {
     p.style.transition = "stroke-dashoffset 1.4s cubic-bezier(0.45, 0, 0.15, 1)";
     p.style.strokeDashoffset = "0";
     setRevealed(true);
-  }, [trailId, lengthKm, elev]);
+  }, [trailId, lengthKm, elev, source]);
 
   // SVG layout.
   const W = 720, H = 240, padL = 40, padR = 16, padT = 18, padB = 30;
@@ -181,7 +239,9 @@ export default function TrailProfileGraph({ trailId, name, lengthKm, elevM }) {
     <div className="trail-profile-glass" data-revealed={revealed ? "true" : "false"}>
       <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2 px-1">
         <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">
-          Trail profile · <span className="font-normal normal-case text-[10px]">estimated shape</span>
+          Trail profile · <span className="font-normal normal-case text-[10px]">
+            {fetching ? "loading DEM…" : source === "real" ? "from SRTM DEM" : "estimated shape"}
+          </span>
         </h2>
         <div className="text-[10px] text-[var(--muted)]">
           color = local gradient %
