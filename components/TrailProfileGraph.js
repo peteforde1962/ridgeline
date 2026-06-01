@@ -119,7 +119,27 @@ function gradientColor(pct) {
   return                  "#3d7a93";  // steep descent
 }
 
-export default function TrailProfileGraph({ trailId, name, lengthKm, elevM }) {
+// Estimate a plausible elev gain when the trail row has no elev_m. Uses
+// length + difficulty + a seeded variance so every trail looks distinct rather
+// than all defaulting to 50m.
+function estimateElev(lengthKm, difficulty, seedStr) {
+  if (!lengthKm || lengthKm <= 0) return 50;
+  // Base meters-per-km by difficulty (rough MTB-typical):
+  //   Green: ~15  Blue: ~30  Black: ~55  Double Black: ~75
+  const baseByDiff = {
+    "Green":        15,
+    "Blue":         30,
+    "Black":        55,
+    "Double Black": 75,
+  };
+  const base = baseByDiff[difficulty] || 35;
+  // Seed-based variance ±50% so different trails of the same length don't look identical.
+  const rand = seededRand(hashSeed(seedStr || "trail"));
+  const variance = 0.5 + rand() * 1.0;        // 0.5x to 1.5x
+  return Math.round(base * lengthKm * variance);
+}
+
+export default function TrailProfileGraph({ trailId, name, lengthKm, elevM, difficulty }) {
   const [revealed, setRevealed] = useState(false);
   const [realProfile, setRealProfile] = useState(null);   // { samples, total_climb, total_descent }
   const [fetching, setFetching] = useState(true);
@@ -130,7 +150,11 @@ export default function TrailProfileGraph({ trailId, name, lengthKm, elevM }) {
   if (!lengthKm || lengthKm <= 0) {
     return null;
   }
-  const elev = elevM || Math.max(50, lengthKm * 20);
+  // Prefer the trail's stated elev_m; else estimate from length + difficulty
+  // + a per-trail seed so every trail looks different (no more 50m everywhere).
+  const elev = (elevM != null && elevM > 0)
+    ? elevM
+    : estimateElev(lengthKm, difficulty, trailId || name);
 
   // Procedural fallback profile.
   const proc = useMemo(

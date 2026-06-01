@@ -95,6 +95,7 @@ export default async function TrailProfilePage({ params }) {
         name={trail.name}
         lengthKm={trail.length_km}
         elevM={trail.elev_m}
+        difficulty={trail.difficulty}
       />
 
       {/* Stat grid */}
