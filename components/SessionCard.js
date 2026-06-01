@@ -112,13 +112,25 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
   const statusIcon = status === "done" ? "✓" : status === "skipped" ? "✗" : "○";
   const statusColor = status === "done" ? "#5cb85c" : status === "skipped" ? "#d9534f" : "var(--muted)";
 
+  const prescribed = !!stored?.prescribed_by_coach_id;
+
   return (
-    <div className="card mb-3" style={{ opacity: isSkipped ? 0.7 : 1 }}>
+    <div className="card mb-3" style={{
+      opacity: isSkipped ? 0.7 : 1,
+      borderColor: prescribed ? "rgba(248,182,166,.55)" : undefined,
+      borderWidth: prescribed ? 1.5 : undefined,
+    }}>
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`text-xs px-2 py-1 rounded ${sessionTagClass(effectiveType)}`}>
             {sessionLabel(effectiveType)}{swappedTo && <span className="text-[10px] ml-1 opacity-70">(swapped)</span>}
           </span>
+          {prescribed && (
+            <span className="text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wide"
+                  style={{ background: "var(--accent)", color: "#1a2a30" }}>
+              From your coach
+            </span>
+          )}
           <h3 className="font-bold text-base">
             <span style={{ color: statusColor, marginRight: 6, fontWeight: 900 }}>{statusIcon}</span>
             {displayName}
