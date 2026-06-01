@@ -32,32 +32,60 @@ function hashSeed(str) {
 }
 
 // Generate a realistic-looking profile of length lengthKm with total climb elevM.
+//
+// Approach: sum a small number of smooth Gaussian bumps (each a climb or
+// descent feature), then SCALE the whole curve so the sum of positive deltas
+// matches the trail's stated elev gain. That way the displayed total climb is
+// faithful to elev_m and gradients stay in a realistic 0–25% range for normal
+// trails rather than spiking through wild high-frequency harmonics.
 function generateProfile(lengthKm, elevM, seedStr) {
   const rand = seededRand(hashSeed(seedStr || "trail"));
-  // Sum of harmonics produces a believable, varied shape.
+
+  // Number of climb/descent features grows with length.
+  const numFeatures = Math.max(2, Math.min(6, Math.round(lengthKm * 1.2)));
+
+  // Place each feature: smooth Gaussian bump with center, width, amplitude.
+  // Amplitudes are unit-less here — we scale to elev_m below.
+  const features = [];
+  for (let i = 0; i < numFeatures; i++) {
+    const center = (i + 0.5 + (rand() - 0.5) * 0.5) / numFeatures;       // ~spread across 0..1
+    const width  = 0.18 + rand() * 0.18;                                  // bump width
+    const amp    = (rand() < 0.6 ? 1 : -1) * (0.5 + rand() * 0.7);        // climb-biased mix
+    features.push({ center, width, amp });
+  }
+
+  // Render the raw curve.
   const points = [];
-  // Bias parameter — high elev/km trails feel more climbing-heavy.
-  const climbiness = Math.min(1, (elevM || 0) / (lengthKm * 80));
   for (let i = 0; i < NUM_POINTS; i++) {
     const t = i / (NUM_POINTS - 1);
-    const x = t * lengthKm;
-    // 3 harmonic sines + small noise. Bias the main hump by climbiness so trails
-    // with lots of elev gain rise toward the middle/end.
-    const main = Math.sin(t * Math.PI) * (0.55 + 0.20 * climbiness);
-    const sub1 = Math.sin(t * Math.PI * 2.7 + 1.2 + rand() * 6) * 0.30;
-    const sub2 = Math.sin(t * Math.PI * 5.1 + 2.7 + rand() * 6) * 0.15;
-    const sub3 = Math.sin(t * Math.PI * 9.0 + 0.5 + rand() * 6) * 0.06;
-    const noise = (rand() - 0.5) * 0.05;
-    const y_raw = main + sub1 + sub2 + sub3 + noise;
-    points.push({ x, y_raw });
+    let y = 0;
+    for (const f of features) {
+      const d = (t - f.center) / f.width;
+      y += f.amp * Math.exp(-d * d * 1.4);     // Gaussian-like
+    }
+    points.push({ x: t * lengthKm, y_raw: y });
   }
-  // Normalize raw y to [0, elevM] so total climb roughly matches the trail's stated elev gain.
-  const minY = Math.min(...points.map(p => p.y_raw));
-  const maxY = Math.max(...points.map(p => p.y_raw));
-  const range = maxY - minY || 1;
+
+  // Total raw climb (sum of positive deltas).
+  let rawClimb = 0;
+  for (let i = 1; i < points.length; i++) {
+    const d = points[i].y_raw - points[i - 1].y_raw;
+    if (d > 0) rawClimb += d;
+  }
+
+  // Scale the entire profile so total climb = elev_m. If elev_m isn't known,
+  // default to a modest 30 m/km (typical XC pace).
+  const targetClimb = elevM && elevM > 0 ? elevM : Math.max(20, lengthKm * 30);
+  const scale = rawClimb > 0 ? targetClimb / rawClimb : 1;
+
+  // Apply scale + shift so the curve starts at 0 (visual baseline).
+  let minY = Infinity;
   for (const p of points) {
-    p.y = ((p.y_raw - minY) / range) * (elevM || 100);
+    p.y = p.y_raw * scale;
+    if (p.y < minY) minY = p.y;
   }
+  for (const p of points) p.y -= minY;
+
   // Local gradient (%) between adjacent points.
   for (let i = 0; i < points.length; i++) {
     const prev = points[Math.max(0, i - 1)];
@@ -66,7 +94,8 @@ function generateProfile(lengthKm, elevM, seedStr) {
     const dyM = next.y - prev.y;
     points[i].gradient = dxM > 0 ? (dyM / dxM) * 100 : 0;
   }
-  // Stats
+
+  // Final stats (post-scaling — total climb here equals targetClimb).
   let totalClimb = 0, totalDescent = 0, maxGradient = 0, minGradient = 0;
   for (let i = 1; i < points.length; i++) {
     const d = points[i].y - points[i - 1].y;
@@ -152,10 +181,10 @@ export default function TrailProfileGraph({ trailId, name, lengthKm, elevM }) {
     <div className="trail-profile-glass" data-revealed={revealed ? "true" : "false"}>
       <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2 px-1">
         <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">
-          Trail profile
+          Trail profile · <span className="font-normal normal-case text-[10px]">estimated shape</span>
         </h2>
         <div className="text-[10px] text-[var(--muted)]">
-          color = gradient % · estimated from length + total climb
+          color = local gradient %
         </div>
       </div>
 
