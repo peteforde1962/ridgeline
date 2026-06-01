@@ -1,14 +1,13 @@
 // POST /api/admin/backfill-trail-geometry
-// For each trail without stored geometry, query OSM Overpass for a way that
-// matches the trail name. Anchor priority:
-//   1. Trail's region label maps to a known region centroid
-//   2. A linked ride's start_lat/start_lon
-//   3. A linked ride's polyline (first decoded point)
-// Save the polyline back onto the trail row.
 //
-// Body: { skipIds?: [trail_id...] }  — IDs to exclude from this batch so the
-// client can keep paging through trails that have been tried-and-failed
-// without re-trying them every cycle.
+// Smart batching: groups trails missing geometry by anchor location (region
+// centroid → ride start → polyline first point), then processes ONE anchor per
+// call — one OSM Overpass query, then in-memory name matching for every trail
+// in that group. Slow trails no longer multiply against the 60s timeout.
+//
+// Body (optional): { skipAnchorKeys?: ["49.70,-123.16", ...] }
+//   Anchor keys the client has already tried and that returned 0 matches; we
+//   skip them so we keep making progress.
 
 import { createClient } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
@@ -18,7 +17,6 @@ import { decodePolyline } from "@/lib/polyline-decode";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const BATCH_SIZE = 20;
 const SEARCH_RADIUS_KM = 15;
 
 // Look up centroid for a stored region label like "Squamish, BC".
@@ -31,7 +29,6 @@ function regionCentroid(regionLabel) {
   return hit ? { lat: hit.lat, lon: hit.lon } : null;
 }
 
-// Decode the first valid point off a stored ride polyline.
 function firstPolylinePoint(polylineStr) {
   if (!polylineStr) return null;
   try {
@@ -40,6 +37,11 @@ function firstPolylinePoint(polylineStr) {
   } catch {
     return null;
   }
+}
+
+function anchorKey(a) {
+  if (!a) return null;
+  return `${a.lat.toFixed(2)},${a.lon.toFixed(2)}`;
 }
 
 export async function POST(request) {
@@ -52,87 +54,121 @@ export async function POST(request) {
     if (!me?.is_admin) return Response.json({ error: "Admins only" }, { status: 403 });
 
     const body = await request.json().catch(() => ({}));
-    const skipIds = Array.isArray(body.skipIds) ? body.skipIds : [];
+    const skipAnchorKeys = new Set(body.skipAnchorKeys || []);
 
     const admin = adminClient();
 
-    // Trails missing geometry, oldest first, EXCLUDING the ones the client says
-    // they've already tried in this session.
-    let query = admin.from("trails")
-      .select("id, user_id, name, region")
+    // Pull EVERY trail missing geometry — usually a few hundred, cheap to load.
+    const { data: trails } = await admin.from("trails")
+      .select("id, name, region")
       .is("geometry", null)
-      .order("created_at", { ascending: true })
-      .limit(BATCH_SIZE);
-    if (skipIds.length > 0) query = query.not("id", "in", `(${skipIds.join(",")})`);
-    const { data: trails } = await query;
+      .order("region", { ascending: true });
 
-    // Total still missing (so the client can show "N remaining" honestly).
-    const { count: stillMissing } = await admin.from("trails")
-      .select("id", { count: "exact", head: true })
-      .is("geometry", null);
+    const totalMissing = trails?.length || 0;
+    if (totalMissing === 0) {
+      return Response.json({ ok: true, done: true, remaining: 0, message: "All trails already have geometry." });
+    }
 
-    const results = {
-      processed: 0, succeeded: 0,
-      no_anchor: 0, no_osm_match: 0,
-      filled_ids: [], failed_ids: [],
-      errors: [],
-    };
+    // ----- Group trails by anchor -----
+    // First, anchor by region centroid (the cheap path — no per-trail DB hits).
+    const groups = new Map(); // key -> { anchor, trails: [...] }
+    const needRideLookup = [];
+    let noAnchor = 0;
 
-    for (const trail of (trails || [])) {
-      results.processed++;
-      try {
-        // --- pick an anchor ---
-        let anchor = regionCentroid(trail.region);
-
-        if (!anchor) {
-          // Try a linked ride with start coords.
-          const { data: rideLink } = await admin
-            .from("ride_trails")
-            .select("rides!inner(start_lat, start_lon, polyline)")
-            .eq("trail_id", trail.id)
-            .limit(1)
-            .maybeSingle();
-          const r = rideLink?.rides;
-          if (r?.start_lat != null && r?.start_lon != null) {
-            anchor = { lat: r.start_lat, lon: r.start_lon };
-          } else if (r?.polyline) {
-            anchor = firstPolylinePoint(r.polyline);
-          }
-        }
-
-        if (!anchor) {
-          results.no_anchor++;
-          results.failed_ids.push(trail.id);
-          continue;
-        }
-
-        // --- OSM query ---
-        const osmTrails = await fetchOsmTrails({
-          lat: anchor.lat, lon: anchor.lon, radiusKm: SEARCH_RADIUS_KM,
-        });
-        const lower = trail.name.toLowerCase().trim();
-        const match = osmTrails.find((o) =>
-          o.name && o.name.toLowerCase().trim() === lower
-        );
-        if (!match || !match.geometry || match.geometry.length < 2) {
-          results.no_osm_match++;
-          results.failed_ids.push(trail.id);
-          continue;
-        }
-
-        await admin.from("trails")
-          .update({ geometry: match.geometry })
-          .eq("id", trail.id);
-        results.succeeded++;
-        results.filled_ids.push(trail.id);
-      } catch (e) {
-        results.errors.push({ trail: trail.name, error: e.message });
-        results.failed_ids.push(trail.id);
+    for (const t of trails) {
+      const anchor = regionCentroid(t.region);
+      if (anchor) {
+        const key = anchorKey(anchor);
+        if (!groups.has(key)) groups.set(key, { anchor, trails: [] });
+        groups.get(key).trails.push(t);
+      } else {
+        needRideLookup.push(t);
       }
     }
 
-    const remaining = Math.max(0, (stillMissing || 0) - results.succeeded);
-    return Response.json({ ok: true, remaining, ...results });
+    // For trails without a region centroid, find one ride's anchor each.
+    for (const t of needRideLookup) {
+      const { data: rideLink } = await admin
+        .from("ride_trails")
+        .select("rides!inner(start_lat, start_lon, polyline)")
+        .eq("trail_id", t.id)
+        .limit(1)
+        .maybeSingle();
+      const r = rideLink?.rides;
+      let anchor = null;
+      if (r?.start_lat != null && r?.start_lon != null) {
+        anchor = { lat: r.start_lat, lon: r.start_lon };
+      } else if (r?.polyline) {
+        anchor = firstPolylinePoint(r.polyline);
+      }
+      if (anchor) {
+        const key = anchorKey(anchor);
+        if (!groups.has(key)) groups.set(key, { anchor, trails: [] });
+        groups.get(key).trails.push(t);
+      } else {
+        noAnchor++;
+      }
+    }
+
+    // ----- Pick the next un-skipped group to process -----
+    const candidate = [...groups.entries()].find(([key]) => !skipAnchorKeys.has(key));
+    if (!candidate) {
+      return Response.json({
+        ok: true, done: true,
+        remaining: totalMissing - noAnchor,
+        no_anchor: noAnchor,
+        message: "No more anchor groups to try.",
+      });
+    }
+    const [groupKey, group] = candidate;
+
+    // ----- One Overpass query for the whole group -----
+    let osmTrails = [];
+    let osmError = null;
+    try {
+      osmTrails = await fetchOsmTrails({
+        lat: group.anchor.lat, lon: group.anchor.lon, radiusKm: SEARCH_RADIUS_KM,
+      });
+    } catch (e) {
+      osmError = e.message;
+    }
+
+    // Index OSM results by lowercased name for O(1) match per trail.
+    const byName = new Map();
+    for (const o of osmTrails || []) {
+      if (o?.name && o.geometry?.length >= 2) {
+        byName.set(o.name.toLowerCase().trim(), o);
+      }
+    }
+
+    // ----- Match every trail in this group, update in parallel -----
+    let filled = 0, noMatch = 0;
+    const updates = [];
+    for (const t of group.trails) {
+      const match = byName.get(t.name.toLowerCase().trim());
+      if (!match) { noMatch++; continue; }
+      updates.push(
+        admin.from("trails").update({ geometry: match.geometry }).eq("id", t.id)
+      );
+      filled++;
+    }
+    await Promise.all(updates);
+
+    const remaining = totalMissing - filled;
+    return Response.json({
+      ok: true,
+      groupKey,
+      group_label: group.trails[0]?.region || `near ${groupKey}`,
+      group_size: group.trails.length,
+      filled,
+      no_match_in_group: noMatch,
+      osm_returned: byName.size,
+      osm_error: osmError,
+      no_anchor_overall: noAnchor,
+      remaining,
+      remaining_groups: [...groups.entries()].filter(([k]) => !skipAnchorKeys.has(k) && k !== groupKey).length,
+      done: false,
+    });
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });
   }
