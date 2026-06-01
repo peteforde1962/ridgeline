@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
 import ConditionBadge from "@/components/ConditionBadge";
 import AddConditionForm from "@/components/AddConditionForm";
+import TrailProfileGraph from "@/components/TrailProfileGraph";
 
 function formatTime(seconds) {
   if (seconds == null) return "—";
@@ -87,6 +88,14 @@ export default async function TrailProfilePage({ params }) {
           <AddConditionForm trailName={trail.name} region={trail.region} />
         </div>
       </div>
+
+      {/* Glassy trail profile graph — pops out on mount */}
+      <TrailProfileGraph
+        trailId={trail.id}
+        name={trail.name}
+        lengthKm={trail.length_km}
+        elevM={trail.elev_m}
+      />
 
       {/* Stat grid */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">

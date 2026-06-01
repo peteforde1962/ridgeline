@@ -182,6 +182,42 @@ html, body {
   background: rgba(248, 182, 166, 0.55);
 }
 
+/*
+  Trail profile graph — glassy container that scales in on mount so it
+  "pops out" when you land on a trail page.
+*/
+.trail-profile-glass {
+  position: relative;
+  padding: 18px;
+  border-radius: 18px;
+  background:
+    radial-gradient(800px 300px at 50% -20%, rgba(248, 182, 166, 0.18) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(38, 42, 43, 0.55) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20);
+  transform: scale(0.94);
+  opacity: 0;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease-out;
+  margin-bottom: 16px;
+}
+.trail-profile-glass[data-revealed="true"] {
+  transform: scale(1);
+  opacity: 1;
+}
+.trail-profile-glass::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 24px; right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  pointer-events: none;
+}
+
 input[type="range"] {
   accent-color: var(--accent);
   height: 24px;
