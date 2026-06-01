@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Icon from "@/lib/icons";
 
 export default function StravaSyncResult() {
   const router = useRouter();
@@ -29,10 +30,11 @@ export default function StravaSyncResult() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-base font-bold">Strava sync</h2>
-          <p className="text-xs text-[var(--muted)]">Pull recent rides + auto-detect trails near them.</p>
+          <p className="text-xs text-[var(--muted)]">Pull all recent activities from Strava + auto-detect trails on cycling activities.</p>
         </div>
-        <button onClick={sync} disabled={busy} className="btn-primary text-sm">
-          {busy ? "Syncing…" : "⟳ Sync rides now"}
+        <button onClick={sync} disabled={busy} className="btn-primary text-sm inline-flex items-center gap-2">
+          <Icon name="refresh" size={14} stroke="#1a2a30" />
+          {busy ? "Syncing…" : "Sync"}
         </button>
       </div>
 
@@ -42,9 +44,8 @@ export default function StravaSyncResult() {
         <div className="mt-3 text-sm">
           <p className="text-[var(--green)] mb-2">
             ✓ Looked at <strong>{result.fetched}</strong> Strava {result.fetched === 1 ? "activity" : "activities"} ·
-            imported <strong>{result.inserted}</strong> cycling ride{result.inserted === 1 ? "" : "s"} ·
+            imported <strong>{result.inserted}</strong> ·
             auto-linked <strong>{result.matched}</strong> trail{result.matched === 1 ? "" : "s"}.
-            {result.nonCycling > 0 && <> ({result.nonCycling} non-cycling skipped.)</>}
           </p>
           {result.debug && result.debug.length > 0 && (
             <>

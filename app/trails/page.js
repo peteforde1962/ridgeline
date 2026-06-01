@@ -78,14 +78,18 @@ export default async function TrailsPage() {
       </header>
 
       <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
-        <h1 className="text-3xl font-extrabold">Trails & Rides</h1>
+        <h1 className="text-3xl font-extrabold">Trails & Activities</h1>
         <div className="flex gap-2 flex-wrap">
-          <a href="/rides/new" className="btn-primary text-sm">+ Log a ride</a>
-          <a href="/trails/discover" className="btn-ghost text-sm"><Icon name="globe" size={16} /> Discover trails</a>
+          <a href="/rides/new" className="btn-primary text-sm inline-flex items-center gap-1.5">
+            <Icon name="plus" size={14} stroke="#1a2a30" /> Log activity
+          </a>
+          <a href="/trails/discover" className="btn-ghost text-sm inline-flex items-center gap-1.5">
+            <Icon name="globe" size={14} /> Discover trails
+          </a>
         </div>
       </div>
       <p className="text-[var(--muted)] mb-6">
-        Strava rides import automatically and trails auto-populate via GPS. Click any ride for per-trail breakdown.
+        All Strava activities import automatically — rides, runs, hikes, swims, strength, more. Trails auto-detect on cycling activities. Click any activity for details.
       </p>
 
       <StravaSyncResult />
