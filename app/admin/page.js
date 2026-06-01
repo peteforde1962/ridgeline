@@ -6,6 +6,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import PageHeader from "@/components/PageHeader";
 import SubscribeStravaButton from "@/components/SubscribeStravaButton";
 import CoachApprovalRow from "@/components/CoachApprovalRow";
+import TrailGeometryBackfillButton from "@/components/TrailGeometryBackfillButton";
 
 export default async function AdminPage() {
   const supabase = createClient();
@@ -142,6 +143,16 @@ export default async function AdminPage() {
             </ul>
           </details>
         )}
+      </section>
+
+      {/* Trail geometry backfill */}
+      <section className="card mb-6">
+        <h2 className="text-lg font-bold mb-2">Trail geometry backfill</h2>
+        <p className="text-sm text-[var(--muted)] mb-3">
+          Trails imported before the geometry-storage feature don't have polylines, so their elevation profiles fall back to estimated curves.
+          This runs OSM Overpass for each missing trail, anchored on a linked ride's GPS start point. Batched and rate-limited; processes about 20 per click before continuing.
+        </p>
+        <TrailGeometryBackfillButton />
       </section>
 
       {/* Strava auto-sync */}
