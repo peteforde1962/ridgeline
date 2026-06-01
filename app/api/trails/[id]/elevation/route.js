@@ -19,7 +19,10 @@ export async function GET(_request, { params }) {
       .maybeSingle();
     if (!trail) return Response.json({ error: "Not found" }, { status: 404 });
 
-    const profile = await getTrailElevationProfile(supabase, trail);
+    // ?refresh=1 forces a recompute (skips cache). Use after switching DEM
+    // dataset or sampling logic so old cached profiles get refreshed.
+    const force = new URL(_request.url).searchParams.get("refresh") === "1";
+    const profile = await getTrailElevationProfile(supabase, trail, { force });
     if (!profile) return Response.json({ profile: null, reason: "no-geometry" });
     return Response.json({ profile });
   } catch (e) {
