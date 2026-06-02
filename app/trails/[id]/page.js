@@ -8,6 +8,7 @@ import PageHeader from "@/components/PageHeader";
 import ConditionBadge from "@/components/ConditionBadge";
 import AddConditionForm from "@/components/AddConditionForm";
 import TrailProfileGraph from "@/components/TrailProfileGraph";
+import TrailGpxUpload from "@/components/TrailGpxUpload";
 
 function formatTime(seconds) {
   if (seconds == null) return "—";
@@ -95,13 +96,18 @@ export default async function TrailProfilePage({ params }) {
         name={trail.name}
         lengthKm={trail.length_km}
         elevM={trail.elev_m}
+        descentM={trail.descent_m}
         difficulty={trail.difficulty}
       />
+
+      <TrailGpxUpload trailId={trail.id} trailName={trail.name} />
 
       {/* Stat grid */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Stat label="Length"   v={trail.length_km != null ? `${trail.length_km} km` : "—"} />
-        <Stat label="Climbing" v={trail.elev_m != null ? `${trail.elev_m} m` : "—"} />
+        <Stat label="Climb / Descent"
+              v={`${trail.elev_m ?? "—"} / ${trail.descent_m ?? "—"}`}
+              sub="m" />
         <Stat label="Times ridden" v={rideCount} accent />
         <Stat label="Fastest" v={formatTime(fastestSec)} />
       </section>
@@ -175,11 +181,13 @@ export default async function TrailProfilePage({ params }) {
   );
 }
 
-function Stat({ label, v, accent }) {
+function Stat({ label, v, sub, accent }) {
   return (
     <div className="card">
       <div className="text-xs uppercase tracking-wide text-[var(--muted)] mb-1">{label}</div>
-      <div className={`text-2xl font-extrabold ${accent ? "text-[var(--accent)]" : ""}`}>{v}</div>
+      <div className={`text-2xl font-extrabold ${accent ? "text-[var(--accent)]" : ""}`}>
+        {v}{sub && <span className="text-sm text-[var(--muted)] ml-1">{sub}</span>}
+      </div>
     </div>
   );
 }
