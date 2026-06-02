@@ -1,10 +1,14 @@
 "use client";
 
+// Garmin Connect integration card. Mirrors Strava + Suunto.
+// Requires Garmin Developer Program access (apply at developerportal.garmin.com)
+// to obtain GARMIN_CLIENT_ID + GARMIN_CLIENT_SECRET.
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/lib/icons";
 
-export default function SuuntoCard({ connected, userId, lastSyncAt, suunto }) {
+export default function GarminCard({ connected, userId, lastSyncAt, garmin }) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState(null);
@@ -13,7 +17,7 @@ export default function SuuntoCard({ connected, userId, lastSyncAt, suunto }) {
   async function sync() {
     setSyncing(true); setError(""); setResult(null);
     try {
-      const res = await fetch("/api/suunto/sync", { method: "POST" });
+      const res = await fetch("/api/garmin/sync", { method: "POST" });
       const data = await res.json();
       if (!res.ok) setError(data.error || "Sync failed");
       else { setResult(data); router.refresh(); }
@@ -22,26 +26,26 @@ export default function SuuntoCard({ connected, userId, lastSyncAt, suunto }) {
   }
 
   async function disconnect() {
-    if (!window.confirm("Disconnect Suunto? Imported workouts stay; new ones won't auto-sync.")) return;
-    const res = await fetch("/api/suunto/disconnect", { method: "POST" });
+    if (!window.confirm("Disconnect Garmin? Imported workouts stay; new ones won't auto-sync.")) return;
+    const res = await fetch("/api/garmin/disconnect", { method: "POST" });
     if (!res.ok) { alert("Disconnect failed."); return; }
     router.refresh();
   }
 
   return (
     <div className="card">
-      <h2 className="text-lg font-bold mb-1">Suunto</h2>
+      <h2 className="text-lg font-bold mb-1">Garmin Connect</h2>
       <p className="text-sm text-[var(--muted)] mb-4">
-        Import every workout from your Suunto watch — rides, runs, hikes, swims, strength, yoga, ski. All activity types come through tagged with the correct sport.
+        Import every workout from your Garmin — rides, runs, hikes, swims, strength, yoga, ski. All activity types come through tagged with the correct sport.
       </p>
 
-      {suunto === "connected" && <p className="text-[var(--green)] text-sm mb-3">✓ Suunto connected.</p>}
-      {suunto === "denied" && <p className="text-[var(--red)] text-sm mb-3">⚠ Access denied. Reconnect to import.</p>}
-      {suunto === "exchange-failed" && <p className="text-[var(--red)] text-sm mb-3">⚠ Token exchange failed. Check Suunto app config.</p>}
+      {garmin === "connected" && <p className="text-[var(--green)] text-sm mb-3">✓ Garmin connected.</p>}
+      {garmin === "denied" && <p className="text-[var(--red)] text-sm mb-3">⚠ Access denied. Reconnect to import.</p>}
+      {garmin === "exchange-failed" && <p className="text-[var(--red)] text-sm mb-3">⚠ Token exchange failed. Check Garmin app config.</p>}
 
       {!connected ? (
-        <a href="/api/suunto/connect" className="btn-primary inline-flex items-center gap-2">
-          <Icon name="bolt" size={14} stroke="#1a2a30" /> Connect Suunto
+        <a href="/api/garmin/connect" className="btn-primary inline-flex items-center gap-2">
+          <Icon name="bolt" size={14} stroke="#1a2a30" /> Connect Garmin
         </a>
       ) : (
         <div>
@@ -58,8 +62,7 @@ export default function SuuntoCard({ connected, userId, lastSyncAt, suunto }) {
           </div>
           {result && (
             <p className="text-sm text-[var(--green)] mt-3">
-              ✓ Imported {result.inserted} workout{result.inserted === 1 ? "" : "s"}
-              {result.ticked > 0 && ` · ticked ${result.ticked} plan session${result.ticked === 1 ? "" : "s"}`}.
+              ✓ Imported {result.inserted} activit{result.inserted === 1 ? "y" : "ies"}.
             </p>
           )}
           {error && <p className="text-sm text-[var(--red)] mt-3">⚠ {error}</p>}

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import ProfileForm from "@/components/ProfileForm";
 import StravaCard from "@/components/StravaCard";
 import SuuntoCard from "@/components/SuuntoCard";
+import GarminCard from "@/components/GarminCard";
 import PageHeader from "@/components/PageHeader";
 import EmailPrefs from "@/components/EmailPrefs";
 import CoachInviteCard from "@/components/CoachInviteCard";
@@ -25,6 +26,7 @@ export default async function ProfilePage({ searchParams }) {
 
   const stravaStatus = searchParams?.strava || "";
   const suuntoStatus = searchParams?.suunto || "";
+  const garminStatus = searchParams?.garmin || "";
 
   // If the student has a coach, load the coach profile for display.
   let coach = null;
@@ -69,6 +71,13 @@ export default async function ProfilePage({ searchParams }) {
           userId={profile?.suunto_user_id}
           lastSyncAt={profile?.suunto_last_sync_at}
           suunto={suuntoStatus}
+        />
+
+        <GarminCard
+          connected={!!profile?.garmin_refresh_token}
+          userId={profile?.garmin_user_id}
+          lastSyncAt={profile?.garmin_last_sync_at}
+          garmin={garminStatus}
         />
       </div>
     </main>
