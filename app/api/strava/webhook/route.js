@@ -64,6 +64,9 @@ export async function POST(request) {
       .from("trails").select("id, name, length_km, elev_m").eq("user_id", profile.id);
     const detection = await detectTrailsForActivity({
       supabase: admin, userId: profile.id, activity, userTrails: [...(userTrails || [])],
+      // Single-activity webhook — small one-shot cache so the OSM timeout
+      // path still works.
+      osmCache: { byKey: new Map(), timedOut: false },
     });
 
     const totalPoints = detection.matches.reduce((a, m) => a + (m.points || 0), 0);

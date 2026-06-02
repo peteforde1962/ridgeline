@@ -41,6 +41,10 @@ export async function POST(request) {
 
     let inserted = 0, nonCycling = 0, totalLinks = 0, planTicked = 0;
 
+    // Share the OSM area-trail lookup across all rides in this sync so we
+    // don't hammer Overpass per ride.
+    const osmCache = { byKey: new Map(), timedOut: false };
+
     for (const activity of activities) {
       const row = activityToRide(activity, user.id);
       if (!row) {
@@ -78,7 +82,7 @@ export async function POST(request) {
       inserted++;
 
       const detection = await detectTrailsForActivity({
-        supabase, userId: user.id, activity: detailedActivity, userTrails: trailsCache,
+        supabase, userId: user.id, activity: detailedActivity, userTrails: trailsCache, osmCache,
       });
 
       // Compute per-trail seconds from point counts × total moving time.
