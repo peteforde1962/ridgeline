@@ -117,12 +117,19 @@ export default async function RideDetailPage({ params }) {
                       ? Math.round((t.seconds_on_trail / totalSeconds) * 100)
                       : null;
                     return (
-                      <tr key={t.trail_id} className="border-t border-[var(--line)]">
-                        <td className="p-2 font-semibold">{t.name}</td>
-                        <td className="p-2"><span className="text-xs px-2 py-0.5 rounded bg-[var(--panel2)] border border-[var(--line)]">{t.difficulty || "—"}</span></td>
-                        <td className="p-2">{t.seconds_on_trail != null ? formatTime(t.seconds_on_trail) : <span className="text-[var(--muted)]">— resync</span>}</td>
-                        <td className="p-2">{pct != null ? `${pct}%` : "—"}</td>
-                        <td className="p-2">{t.length_km != null ? `${t.length_km} km` : "—"}</td>
+                      <tr key={t.trail_id}
+                          className="border-t border-[var(--line)] hover:bg-[var(--panel2)] transition-colors cursor-pointer">
+                        <td className="p-2 font-semibold">
+                          <a href={`/trails/${t.trail_id}`}
+                             className="text-[var(--accent)] hover:underline inline-flex items-center gap-1">
+                            {t.name}
+                            <span className="text-xs opacity-70">→</span>
+                          </a>
+                        </td>
+                        <td className="p-2"><a href={`/trails/${t.trail_id}`} className="block"><span className="text-xs px-2 py-0.5 rounded bg-[var(--panel2)] border border-[var(--line)]">{t.difficulty || "—"}</span></a></td>
+                        <td className="p-2"><a href={`/trails/${t.trail_id}`} className="block">{t.seconds_on_trail != null ? formatTime(t.seconds_on_trail) : <span className="text-[var(--muted)]">— resync</span>}</a></td>
+                        <td className="p-2"><a href={`/trails/${t.trail_id}`} className="block">{pct != null ? `${pct}%` : "—"}</a></td>
+                        <td className="p-2"><a href={`/trails/${t.trail_id}`} className="block">{t.length_km != null ? `${t.length_km} km` : "—"}</a></td>
                       </tr>
                     );
                   })}
@@ -139,9 +146,12 @@ export default async function RideDetailPage({ params }) {
               </table>
             </div>
           )}
-          {trailRows.some(t => t.seconds_on_trail == null) && (
+          {trailRows.length > 0 && (
             <p className="text-xs text-[var(--muted)] mt-3">
-              ⓘ Per-trail times are estimated from your GPS polyline. Rides synced before the per-trail-time feature show "— resync" — running another Strava sync re-detects them.
+              Click a trail to open its profile, conditions, and your history on it.
+              {trailRows.some(t => t.seconds_on_trail == null) && (
+                <> Rides synced before the per-trail-time feature show "— resync" — another Strava sync re-detects them.</>
+              )}
             </p>
           )}
         </section>
