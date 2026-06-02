@@ -1,19 +1,22 @@
 // /plan — full N-week plan grid with swap-aware tags, extras, and note indicators.
+// ?view=calendar swaps the week list for a month-grid calendar.
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildPlan, currentWeekIndex, sessionLabel, sessionTagClass, PHASES,
-  dateForDay, formatShortDate,
+  dateForDay, formatShortDate, todayDateInTz,
 } from "@/lib/plan";
 import PlanDayCell from "@/components/PlanDayCell";
 import PageHeader from "@/components/PageHeader";
 import BackfillPlanButton from "@/components/BackfillPlanButton";
+import PlanCalendar from "@/components/PlanCalendar";
 
-export default async function PlanPage() {
+export default async function PlanPage({ searchParams }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const view = searchParams?.view === "calendar" ? "calendar" : "weeks";
 
   const { data: profile } = await supabase
     .from("profiles").select("*").eq("id", user.id).single();
@@ -70,19 +73,52 @@ export default async function PlanPage() {
     return { scheduled, done, pct: scheduled ? Math.round(100 * done / scheduled) : 0 };
   }
 
+  const todayYMD = todayDateInTz(profile?.timezone);
+
   return (
     <main className="min-h-screen p-6 max-w-6xl mx-auto">
       <PageHeader />
-      <h1 className="text-3xl font-extrabold mb-1">{plan.length}-Week Plan</h1>
+      <div className="flex items-baseline justify-between flex-wrap gap-3 mb-1">
+        <h1 className="text-3xl font-extrabold">{plan.length}-Week Plan</h1>
+        <div className="inline-flex rounded-lg overflow-hidden"
+             style={{ border: "1px solid var(--line)" }}>
+          <a href="/plan?view=weeks"
+             className={`text-xs font-semibold px-3 py-1.5 ${view === "weeks" ? "" : "text-[var(--muted)]"}`}
+             style={{ background: view === "weeks" ? "var(--accent)" : "transparent",
+                      color: view === "weeks" ? "#1a2a30" : undefined }}>
+            Weeks
+          </a>
+          <a href="/plan?view=calendar"
+             className={`text-xs font-semibold px-3 py-1.5 ${view === "calendar" ? "" : "text-[var(--muted)]"}`}
+             style={{ background: view === "calendar" ? "var(--accent)" : "transparent",
+                      color: view === "calendar" ? "#1a2a30" : undefined }}>
+            Calendar
+          </a>
+        </div>
+      </div>
       <p className="text-[var(--muted)] mb-3">
-        Tap a session tag to cycle: <span className="text-[var(--text)]">○ pending → ✓ done → ✗ skipped</span>.
-        Click a day to add workouts, notes, or change details. ✎ = day has notes.
+        {view === "calendar"
+          ? "Month view of your plan. Click any day to view details."
+          : <>Tap a session tag to cycle: <span className="text-[var(--text)]">○ pending → ✓ done → ✗ skipped</span>. Click a day to add workouts, notes, or change details. ✎ = day has notes.</>}
       </p>
 
       <div className="mb-5">
         <BackfillPlanButton />
       </div>
 
+      {view === "calendar" && (
+        <PlanCalendar
+          plan={plan}
+          startedAt={profile?.started_at}
+          sessionsByDay={sessionsByDay}
+          extrasByDay={extrasByDay}
+          notesByDay={notesByDay}
+          todayYMD={todayYMD}
+        />
+      )}
+
+      {view === "weeks" && (
+        <>
       <div className="grid grid-cols-5 gap-2 mb-6">
         {phaseSummary.map((p) => {
           const isCurrent = plan[wIdx]?.phase === p.key;
@@ -179,6 +215,8 @@ export default async function PlanPage() {
           );
         })}
       </div>
+        </>
+      )}
     </main>
   );
 }
