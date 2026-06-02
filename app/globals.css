@@ -218,6 +218,11 @@ html, body {
   pointer-events: none;
 }
 
+@keyframes profileShimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position:   0% 0; }
+}
+
 input[type="range"] {
   accent-color: var(--accent);
   height: 24px;

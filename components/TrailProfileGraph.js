@@ -139,11 +139,12 @@ function estimateElev(lengthKm, difficulty, seedStr) {
   return Math.round(base * lengthKm * variance);
 }
 
-export default function TrailProfileGraph({ trailId, name, lengthKm, elevM, difficulty }) {
+export default function TrailProfileGraph({ trailId, name, lengthKm, elevM, descentM, difficulty }) {
   const [revealed, setRevealed] = useState(false);
   const [realProfile, setRealProfile] = useState(null);   // { samples, total_climb, total_descent }
   const [fetching, setFetching] = useState(true);
   const [source, setSource] = useState("estimated");      // 'real' | 'estimated' | 'no-geometry'
+  const [resolved, setResolved] = useState(false);        // true once we know real vs estimated — avoids flash
   const pathRef = useRef(null);
 
   // Bail out cleanly if we don't have enough data.
@@ -162,10 +163,13 @@ export default function TrailProfileGraph({ trailId, name, lengthKm, elevM, diff
     [trailId, name, lengthKm, elev]
   );
 
-  // Try to fetch the real elevation profile (sampled DEM).
+  // Try to fetch the real elevation profile (sampled DEM). Until this resolves
+  // we DON'T render anything — otherwise the procedural fallback flashes for
+  // a second and then swaps out, which reads as "wrong data → correct data".
   useEffect(() => {
     let cancelled = false;
     setFetching(true);
+    setResolved(false);
     (async () => {
       try {
         const res = await fetch(`/api/trails/${trailId}/elevation`);
@@ -180,7 +184,7 @@ export default function TrailProfileGraph({ trailId, name, lengthKm, elevM, diff
       } catch {
         if (!cancelled) setSource("estimated");
       }
-      if (!cancelled) setFetching(false);
+      if (!cancelled) { setFetching(false); setResolved(true); }
     })();
     return () => { cancelled = true; };
   }, [trailId]);
@@ -228,18 +232,20 @@ export default function TrailProfileGraph({ trailId, name, lengthKm, elevM, diff
     return proc;
   }, [realProfile, proc]);
 
-  // Stroke-dashoffset reveal animation on mount AND when source changes (real arrives).
+  // Stroke-dashoffset reveal animation — only after the fetch resolves so the
+  // animation runs on the FINAL curve, not the placeholder.
   useEffect(() => {
+    if (!resolved) return;
     const p = pathRef.current;
     if (!p) return;
     const len = p.getTotalLength();
     p.style.strokeDasharray = len;
     p.style.strokeDashoffset = len;
-    p.getBoundingClientRect();  // force layout
+    p.getBoundingClientRect();
     p.style.transition = "stroke-dashoffset 1.4s cubic-bezier(0.45, 0, 0.15, 1)";
     p.style.strokeDashoffset = "0";
     setRevealed(true);
-  }, [trailId, lengthKm, elev, source]);
+  }, [resolved, trailId, lengthKm, elev, source]);
 
   // SVG layout.
   const W = 720, H = 240, padL = 40, padR = 16, padT = 18, padB = 30;
@@ -271,12 +277,42 @@ export default function TrailProfileGraph({ trailId, name, lengthKm, elevM, diff
   const xTicks = [];
   for (let k = 0; k <= lengthKm + 0.001; k += xTickStep) xTicks.push(+k.toFixed(1));
 
+  // Show a glassy skeleton while the elevation fetch is in flight so we
+  // never flash the procedural shape before real data arrives.
+  if (!resolved) {
+    return (
+      <div className="trail-profile-glass" data-revealed="true">
+        <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2 px-1">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">
+            Trail profile · <span className="font-normal normal-case text-[10px]">loading elevation…</span>
+          </h2>
+        </div>
+        <div style={{
+          width: "100%", height: 240, borderRadius: 8,
+          background: "linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(248,182,166,0.08) 50%, rgba(255,255,255,0.04) 100%)",
+          backgroundSize: "200% 100%",
+          animation: "profileShimmer 1.4s ease-in-out infinite",
+        }} />
+        <div className="grid grid-cols-4 gap-2 mt-3 px-1">
+          {[0,1,2,3].map((i) => (
+            <div key={i} className="rounded-lg px-3 py-2"
+                 style={{
+                   background: "rgba(255,255,255,0.04)",
+                   border: "1px solid rgba(255,255,255,0.07)",
+                   height: 54,
+                 }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="trail-profile-glass" data-revealed={revealed ? "true" : "false"}>
       <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2 px-1">
         <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">
           Trail profile · <span className="font-normal normal-case text-[10px]">
-            {fetching ? "loading DEM…" : source === "real" ? "from SRTM DEM" : "estimated shape"}
+            {source === "real" ? "from SRTM DEM" : "estimated shape"}
           </span>
         </h2>
         <div className="text-[10px] text-[var(--muted)]">
