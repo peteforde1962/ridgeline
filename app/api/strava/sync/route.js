@@ -100,20 +100,21 @@ export async function POST(request) {
               : null),
       }));
 
-      debug.push({
-        act: activity.id, name: activity.name,
-        date: activity.start_date_local?.slice(0, 10),
-        trails: detection.matches.length, source: detection.source,
-        ...(detection.details || {}),
-      });
-
       // Re-detection: wipe existing links and write the fresh set. This avoids
       // any RLS UPDATE quirks and ensures seconds_on_trail gets refreshed.
-      await supabase.from("ride_trails").delete().eq("ride_id", rideRow.id);
+      const { error: delError } = await supabase.from("ride_trails").delete().eq("ride_id", rideRow.id);
 
+      let rideTrailsInsertError = null;
+      let rideTrailsInsertedCount = 0;
       if (links.length > 0) {
-        await supabase.from("ride_trails").insert(links);
-        totalLinks += links.length;
+        const { data: insertedLinks, error: insErr } = await supabase
+          .from("ride_trails").insert(links).select("trail_id");
+        if (insErr) {
+          rideTrailsInsertError = insErr.message;
+        } else {
+          rideTrailsInsertedCount = insertedLinks?.length || 0;
+        }
+        totalLinks += rideTrailsInsertedCount;
 
         // Back-compat: also set rides.trail_id to the trail with most points.
         const primary = detection.matches
@@ -127,6 +128,17 @@ export async function POST(request) {
           .update({ last_ride: row.date })
           .in("id", detection.matches.map(m => m.trailId));
       }
+
+      debug.push({
+        act: activity.id, name: activity.name,
+        date: activity.start_date_local?.slice(0, 10),
+        trails_matched: detection.matches.length,
+        ride_trails_inserted: rideTrailsInsertedCount,
+        ride_trails_delete_error: delError?.message,
+        ride_trails_insert_error: rideTrailsInsertError,
+        source: detection.source,
+        ...(detection.details || {}),
+      });
 
       // Auto-tick: find an existing ride-type session on this day (template OR
       // swapped OR existing extra). If one exists, attach the ride to it and mark

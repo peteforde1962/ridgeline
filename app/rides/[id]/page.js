@@ -6,6 +6,7 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
 import ActivityBadge from "@/components/ActivityBadge";
+import ResyncOneRideButton from "@/components/ResyncOneRideButton";
 import { sportInfo } from "@/lib/activity";
 
 function formatTime(seconds) {
@@ -65,9 +66,13 @@ export default async function RideDetailPage({ params }) {
         <h1 className="text-3xl font-extrabold">{title}</h1>
         <ActivityBadge sportType={ride.sport_type} kind={kind} size="lg" />
       </div>
-      <p className="text-[var(--muted)] mb-6">
+      <p className="text-[var(--muted)] mb-3">
         {ride.date}{subtitleLoc ? ` · ${subtitleLoc}` : ""}
       </p>
+
+      {ride.strava_activity_id && (
+        <ResyncOneRideButton stravaActivityId={ride.strava_activity_id} />
+      )}
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Stat label="Time" v={`${ride.minutes ?? "—"} min`} />
