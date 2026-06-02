@@ -188,13 +188,25 @@ export default function TrailProfileGraph({ trailId, name, lengthKm, elevM, diff
   // Choose which profile to render — real if available, else procedural.
   const { points, totalClimb, totalDescent, maxGradient, minGradient } = useMemo(() => {
     if (realProfile?.samples?.length > 1) {
-      // Convert real samples to the same point shape as procedural.
-      const pts = realProfile.samples.map((s, i, arr) => {
-        const prev = arr[Math.max(0, i - 1)];
-        const next = arr[Math.min(arr.length - 1, i + 1)];
-        const dxM = (next.km - prev.km) * 1000;
-        const dyM = next.elev - prev.elev;
-        const grad = dxM > 0 ? (dyM / dxM) * 100 : 0;
+      // Convert real samples to point shape, computing gradient over a
+      // sliding ~25m WINDOW rather than adjacent points. Adjacent-point
+      // gradient on 1Hz GPS data spikes wildly even on flat ground because
+      // points might be 4-5m apart and altitude noise of 1m → 20% spike.
+      const arr = realProfile.samples;
+      const WINDOW_M = 25;
+      const pts = arr.map((s, i) => {
+        // Find left/right indices roughly 25m on either side by KM.
+        const targetLeft  = s.km - WINDOW_M / 1000;
+        const targetRight = s.km + WINDOW_M / 1000;
+        let lo = i, hi = i;
+        while (lo > 0 && arr[lo - 1].km >= targetLeft)  lo--;
+        while (hi < arr.length - 1 && arr[hi + 1].km <= targetRight) hi++;
+        const dxM = (arr[hi].km - arr[lo].km) * 1000;
+        const dyM = arr[hi].elev - arr[lo].elev;
+        let grad = dxM > 0 ? (dyM / dxM) * 100 : 0;
+        // Clamp obvious GPS-noise spikes (real MTB grades cap around 40%).
+        if (grad >  40) grad =  40;
+        if (grad < -40) grad = -40;
         return { x: s.km, y: s.elev, gradient: grad };
       });
       // Shift so minimum elevation is 0 for cleaner visual.
