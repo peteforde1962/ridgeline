@@ -1,7 +1,7 @@
 // POST /api/strava/sync — import activities, GPS-detect trails, write per-trail times.
 
 import { createClient } from "@/lib/supabase/server";
-import { ensureFreshToken, fetchAthleteActivities, activityToRide, STRAVA_API_BASE } from "@/lib/strava";
+import { ensureFreshToken, fetchAthleteActivities, fetchActivityStreams, activityToRide, STRAVA_API_BASE } from "@/lib/strava";
 import { detectTrailsForActivity } from "@/lib/trail-detection";
 import { buildPlan, rideToPlanIndex } from "@/lib/plan";
 
@@ -57,6 +57,13 @@ export async function POST(request) {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (dRes.ok) detailedActivity = await dRes.json();
+      } catch {}
+
+      // Fetch altitude/distance streams so trail-detection can compute REAL
+      // climb + descent per trail by slicing on segment_effort indices.
+      try {
+        const streams = await fetchActivityStreams(accessToken, activity.id);
+        if (streams) detailedActivity._streams = streams;
       } catch {}
 
       const { data: rideRow, error: upErr } = await supabase

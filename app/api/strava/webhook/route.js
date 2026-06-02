@@ -1,7 +1,7 @@
 // /api/strava/webhook — auto-import + GPS detection + per-trail time.
 
 import { adminClient } from "@/lib/supabase/admin";
-import { ensureFreshToken, activityToRide, STRAVA_API_BASE } from "@/lib/strava";
+import { ensureFreshToken, activityToRide, fetchActivityStreams, STRAVA_API_BASE } from "@/lib/strava";
 import { detectTrailsForActivity } from "@/lib/trail-detection";
 import { buildPlan, rideToPlanIndex } from "@/lib/plan";
 
@@ -43,6 +43,13 @@ export async function POST(request) {
     if (!actRes.ok) return Response.json({ ok: false, error: "strava fetch failed" }, { status: 502 });
 
     const activity = await actRes.json();
+
+    // Attach altitude streams for accurate per-trail elevation profile.
+    try {
+      const streams = await fetchActivityStreams(accessToken, event.object_id);
+      if (streams) activity._streams = streams;
+    } catch {}
+
     const row = activityToRide(activity, profile.id);
     if (!row) return Response.json({ ok: true, ignored: "non-cycling" });
 
