@@ -1,5 +1,7 @@
 // /plan/[w]/[d] — full day editor: template sessions, extras, day notes.
 
+export const dynamic = "force-dynamic";
+
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buildPlan, DAY_NAMES, currentWeekIndex, todayDayIndex, sessionLabel } from "@/lib/plan";

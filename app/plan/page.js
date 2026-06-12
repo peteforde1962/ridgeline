@@ -1,6 +1,8 @@
 // /plan — full N-week plan grid with swap-aware tags, extras, and note indicators.
 // ?view=calendar swaps the week list for a month-grid calendar.
 
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
