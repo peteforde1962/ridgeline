@@ -113,12 +113,15 @@ export default function PlanCalendar({
             dayObj.details.forEach((s, si) => {
               if (s.type === "rest") return;
               const row = stored?.[si];
+              // Skip pills the user deleted via the Delete button on a template session.
+              if (row?.tweak === "removed") return;
               const eff = row?.swapped_to || s.type;
               const done = !!row?.completed;
               const skipped = row?.tweak === "skipped";
               pills.push({ type: eff, done, skipped, extra: false });
             });
             extras.forEach((e) => {
+              if (e.tweak === "removed") return;
               pills.push({ type: e.swapped_to || "ride", done: !!e.completed, skipped: false, extra: true });
             });
           }

@@ -36,7 +36,8 @@ export default function PlanDayCell({ userId, weekIndex, dayIndex, day, storedMa
       isExtra: true,
       stored: e,
     })),
-  ];
+  // Hide sessions the user deleted (template sessions marked tweak="removed").
+  ].filter((c) => c.stored?.tweak !== "removed");
 
   const [state, setState] = useState(() => {
     const out = {};

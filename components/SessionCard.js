@@ -82,14 +82,12 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
 
   // Delete behaves differently based on session origin:
   //   - Extras (user-added, coach-prescribed, or Strava auto-imported) hard-delete the plan_sessions row.
-  //   - Template sessions (from the generated plan) can't be fully removed without breaking the template,
-  //     so we mark them skipped — same effect visually + in stats but the row stays.
+  //   - Template sessions (from the generated plan) get tweak="removed" — a special state
+  //     that's filtered out of every view (cards, day cells, calendar pills) so the
+  //     session vanishes entirely. The row stays so the template doesn't re-respawn it.
   async function deleteSession() {
     const isExtra = !!stored?.is_extra;
-    const confirmMsg = isExtra
-      ? `Delete "${displayName}"? Removed from your plan.`
-      : `Remove "${displayName}" from this day? It will be marked skipped (template sessions can't be fully deleted).`;
-    if (!window.confirm(confirmMsg)) return;
+    if (!window.confirm(`Delete "${displayName}"?`)) return;
     setBusy(true);
     if (isExtra) {
       if (stored?.id) {
@@ -99,9 +97,9 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
       setBusy(false);
       router.refresh();
     } else {
-      // Template session — skip in place.
-      setTweak("skipped");
-      await persist({ tweak: "skipped" });
+      // Template session — mark removed so every view filters it out.
+      setTweak("removed");
+      await persist({ tweak: "removed" });
     }
   }
 
@@ -139,6 +137,9 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
   const statusColor = status === "done" ? "#5cb85c" : status === "skipped" ? "#d9534f" : "var(--muted)";
 
   const prescribed = !!stored?.prescribed_by_coach_id;
+
+  // Tweak="removed" means the user deleted this template session — filter it out entirely.
+  if (stored?.tweak === "removed") return null;
 
   return (
     <div className="card mb-3" style={{
