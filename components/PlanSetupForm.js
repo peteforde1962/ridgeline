@@ -21,6 +21,14 @@ function todayISO() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
+// Day-of-week buttons. Indices match our Monday-anchored calendar
+// (0 = Mon … 6 = Sun) so they line up with dateForDay / DAY_NAMES.
+const DOW = [
+  { idx: 0, label: "Mon" }, { idx: 1, label: "Tue" }, { idx: 2, label: "Wed" },
+  { idx: 3, label: "Thu" }, { idx: 4, label: "Fri" }, { idx: 5, label: "Sat" },
+  { idx: 6, label: "Sun" },
+];
+
 export default function PlanSetupForm({ userId, profile }) {
   const router = useRouter();
   const supabase = createClient();
@@ -31,6 +39,18 @@ export default function PlanSetupForm({ userId, profile }) {
   const [planWeeks, setPlanWeeks]     = useState(profile?.plan_weeks ?? 12);
   const [goal, setGoal]               = useState(profile?.goal ?? "Race fitness");
   const [raceDate, setRaceDate]       = useState(profile?.race_date ?? "");
+  // Default to all 7 days if the profile hasn't specified (legacy rows).
+  const [workoutDays, setWorkoutDays] = useState(
+    Array.isArray(profile?.workout_days) && profile.workout_days.length > 0
+      ? profile.workout_days
+      : [0,1,2,3,4,5,6]
+  );
+
+  function toggleDay(idx) {
+    setWorkoutDays((cur) =>
+      cur.includes(idx) ? cur.filter((d) => d !== idx) : [...cur, idx].sort((a,b) => a-b)
+    );
+  }
 
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -51,6 +71,7 @@ export default function PlanSetupForm({ userId, profile }) {
     const patch = {
       preset, weekly_hours: weeklyHours, intensity,
       plan_weeks: planWeeks, goal, race_date: raceDate || null,
+      workout_days: workoutDays.length > 0 ? workoutDays : [0,1,2,3,4,5,6],
       updated_at: new Date().toISOString(),
     };
     // If no plan is active yet, saving means "start the plan today."
@@ -142,10 +163,42 @@ export default function PlanSetupForm({ userId, profile }) {
         <label className="field-label">Primary goal</label>
         <select value={goal} onChange={(e) => setGoal(e.target.value)} className="input">
           {[
-            "Race fitness", "Trail-ready endurance",
-            "Get faster on local trails", "Recover from injury", "Just have fun",
+            "Race fitness",
+            "Trail-ready endurance",
+            "Get faster on local trails",
+            "Lose weight",
+            "Recover from injury",
+            "Just have fun",
           ].map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
+      </div>
+
+      <div className="mb-5">
+        <label className="field-label">Workout days</label>
+        <div className="grid grid-cols-7 gap-1.5">
+          {DOW.map(({ idx, label }) => {
+            const on = workoutDays.includes(idx);
+            return (
+              <button key={idx} type="button" onClick={() => toggleDay(idx)}
+                className="rounded-lg font-semibold transition-colors text-xs"
+                style={{
+                  padding: "10px 0",
+                  background: on
+                    ? "linear-gradient(135deg, var(--accent), var(--accent2,#fccabb))"
+                    : "var(--panel)",
+                  color: on ? "#1a2a30" : "var(--muted)",
+                  border: on ? "1px solid var(--accent)" : "1px solid var(--line)",
+                  cursor: "pointer",
+                }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-[var(--muted)] mt-2">
+          Selected days will have workouts scheduled. Unselected days become rest days.
+          {workoutDays.length === 0 && <span className="text-[var(--red,#e87262)]"> (Pick at least one day or your plan will be all rest!)</span>}
+        </p>
       </div>
 
       {error && <p className="text-[var(--red,#e87262)] text-sm mb-3">⚠ {error}</p>}
