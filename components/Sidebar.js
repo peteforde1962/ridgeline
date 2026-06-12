@@ -6,6 +6,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import LogoMark from "./LogoMark";
 
 // Tiny SVG icon components. Stroke-only, flat, 1.75 stroke-width.
 function Icon({ path, viewBox = "0 0 24 24" }) {
@@ -108,11 +109,7 @@ export default function Sidebar() {
   return (
     <aside className="sb">
       <a href="/dashboard" className="flex items-center gap-2 mb-6 px-3 hover:opacity-80">
-        <div className="logo-mark">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 19l5-9 3 5 4-7 6 11z" />
-          </svg>
-        </div>
+        <LogoMark size={32} />
         <span className="font-extrabold text-lg tracking-wide">RidgeLine</span>
       </a>
 

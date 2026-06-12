@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buildPlan, currentWeekIndex, todayDayIndex, todayDateInTz, readinessFromCheckin, sessionLabel } from "@/lib/plan";
 import SessionCard from "@/components/SessionCard";
+import LogoMark from "@/components/LogoMark";
 
 export default async function TodayPage() {
   const supabase = createClient();
@@ -57,11 +58,7 @@ export default async function TodayPage() {
       <header className="flex items-center justify-between mb-6">
         <a href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">← Dashboard</a>
         <div className="flex items-center gap-2">
-          <div className="logo-mark">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 19l5-9 3 5 4-7 6 11z" />
-            </svg>
-          </div>
+          <LogoMark size={28} />
           <div className="font-extrabold text-sm">RidgeLine</div>
         </div>
       </header>

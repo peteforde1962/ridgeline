@@ -11,6 +11,7 @@ import { trainingLoadSeries, currentLoad, formInterpretation } from "@/lib/train
 import SignOutButton from "@/components/SignOutButton";
 import Icon from "@/lib/icons";
 import ActivityBadge from "@/components/ActivityBadge";
+import LogoMark from "@/components/LogoMark";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -108,11 +109,7 @@ export default async function DashboardPage() {
     <main className="min-h-screen p-6 max-w-6xl mx-auto">
       <header className="flex items-center justify-between mb-6">
         <a href="/dashboard" className="flex items-center gap-3 hover:opacity-80 md:hidden">
-          <div className="logo-mark">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 19l5-9 3 5 4-7 6 11z" />
-            </svg>
-          </div>
+          <LogoMark size={32} />
           <div className="font-extrabold text-xl">RidgeLine</div>
         </a>
         <div className="ml-auto"><SignOutButton /></div>

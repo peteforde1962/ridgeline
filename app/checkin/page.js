@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import LogoMark from "@/components/LogoMark";
 import { todayDateInTz } from "@/lib/plan";
 import CheckinForm from "@/components/CheckinForm";
 
@@ -43,11 +44,7 @@ export default async function CheckinPage() {
           ← Dashboard
         </a>
         <div className="flex items-center gap-2">
-          <div className="logo-mark">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 19l5-9 3 5 4-7 6 11z" />
-            </svg>
-          </div>
+          <LogoMark size={28} />
           <div className="font-extrabold text-sm">RidgeLine</div>
         </div>
       </header>

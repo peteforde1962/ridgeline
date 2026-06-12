@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import LogoMark from "@/components/LogoMark";
 
 function rand6() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -46,11 +47,7 @@ export default function SignupPage() {
     <main className="min-h-screen flex items-center justify-center p-6">
       <form onSubmit={handleSignup} className="card max-w-md w-full">
         <div className="flex items-center gap-3 mb-4">
-          <div className="logo-mark">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 19l5-9 3 5 4-7 6 11z" />
-            </svg>
-          </div>
+          <LogoMark size={32} />
           <div className="font-extrabold text-xl">RidgeLine</div>
         </div>
         <h1 className="text-2xl font-extrabold mb-1">Create your account</h1>

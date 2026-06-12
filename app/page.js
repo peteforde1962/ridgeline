@@ -4,6 +4,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Icon from "@/lib/icons";
+import LogoMark from "@/components/LogoMark";
 
 export default async function Home() {
   const supabase = createClient();
@@ -15,11 +16,7 @@ export default async function Home() {
       {/* Top nav */}
       <nav className="px-6 py-4 flex items-center justify-between max-w-6xl mx-auto">
         <a href="/" className="flex items-center gap-2.5">
-          <div className="logo-mark">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 19l5-9 3 5 4-7 6 11z" />
-            </svg>
-          </div>
+          <LogoMark size={32} />
           <span className="font-extrabold text-xl tracking-wide">RidgeLine</span>
         </a>
         <div className="flex items-center gap-2">
