@@ -80,6 +80,31 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
   async function setTweakOpt(opt) { setTweak(opt); await persist({ tweak: opt }); }
   async function swapType(newType) { setSwappedTo(newType); setShowSwap(false); await persist({ swapped_to: newType }); }
 
+  // Delete behaves differently based on session origin:
+  //   - Extras (user-added, coach-prescribed, or Strava auto-imported) hard-delete the plan_sessions row.
+  //   - Template sessions (from the generated plan) can't be fully removed without breaking the template,
+  //     so we mark them skipped — same effect visually + in stats but the row stays.
+  async function deleteSession() {
+    const isExtra = !!stored?.is_extra;
+    const confirmMsg = isExtra
+      ? `Delete "${displayName}"? Removed from your plan.`
+      : `Remove "${displayName}" from this day? It will be marked skipped (template sessions can't be fully deleted).`;
+    if (!window.confirm(confirmMsg)) return;
+    setBusy(true);
+    if (isExtra) {
+      if (stored?.id) {
+        const { error } = await supabase.from("plan_sessions").delete().eq("id", stored.id);
+        if (error) { setBusy(false); alert("Delete failed: " + error.message); return; }
+      }
+      setBusy(false);
+      router.refresh();
+    } else {
+      // Template session — skip in place.
+      setTweak("skipped");
+      await persist({ tweak: "skipped" });
+    }
+  }
+
   const [workoutSource, setWorkoutSource] = useState(stored?.ai_workout ? "cached" : null);
 
   // showWorkout: default load — pulls from the library (instant, on-brand) or returns cached.
@@ -171,6 +196,11 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
         <button onClick={() => setShowSwap(!showSwap)} disabled={busy} className="btn-ghost inline-flex items-center gap-1"
           style={{ padding: "5px 10px", fontSize: 12 }}>
           <Icon name="swap" size={13} /> Change type
+        </button>
+        <button onClick={deleteSession} disabled={busy}
+          className="btn-ghost inline-flex items-center gap-1"
+          style={{ padding: "5px 10px", fontSize: 12, color: "var(--red,#e87262)" }}>
+          <Icon name="trash" size={13} /> Delete
         </button>
         {/* Workout details button — auto-populates from the library by default */}
         {effectiveType !== "rest" && (
