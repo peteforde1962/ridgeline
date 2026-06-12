@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import ProfileForm from "@/components/ProfileForm";
+import RiderIdentityForm from "@/components/RiderIdentityForm";
+import PlanSetupForm from "@/components/PlanSetupForm";
 import StravaCard from "@/components/StravaCard";
 import SuuntoCard from "@/components/SuuntoCard";
 import GarminCard from "@/components/GarminCard";
@@ -53,7 +54,9 @@ export default async function ProfilePage({ searchParams }) {
           ? <CoachInviteCard profile={profile} />
           : <StudentCoachCard profile={profile} coach={coach} />}
 
-        <ProfileForm userId={user.id} profile={profile} />
+        <RiderIdentityForm userId={user.id} profile={profile} />
+
+        <PlanSetupForm userId={user.id} profile={profile} />
 
         <TrainingZones profile={profile} />
 

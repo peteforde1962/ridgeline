@@ -19,9 +19,31 @@ export default async function PlanPage({ searchParams }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const view = searchParams?.view === "calendar" ? "calendar" : "weeks";
+  // Phase filter — clicking a phase tile narrows the weeks shown.
+  const phaseFilter = typeof searchParams?.phase === "string" ? searchParams.phase : null;
 
   const { data: profile } = await supabase
     .from("profiles").select("*").eq("id", user.id).single();
+
+  // No active plan — show the CTA and bail before we try to build/render anything.
+  if (!profile?.started_at) {
+    return (
+      <main className="min-h-screen p-6 max-w-3xl mx-auto">
+        <PageHeader />
+        <h1 className="text-3xl font-extrabold mb-1">Training plan</h1>
+        <p className="text-[var(--muted)] mb-6">
+          You don't have an active plan yet.
+        </p>
+        <div className="card text-center" style={{ padding: 32 }}>
+          <h2 className="text-xl font-bold mb-2">No active plan</h2>
+          <p className="text-[var(--muted)] mb-5">
+            Set up your training plan to get a periodized schedule built around your goals, weekly hours, and race date.
+          </p>
+          <a href="/profile" className="btn-primary inline-flex">Set up plan →</a>
+        </div>
+      </main>
+    );
+  }
 
   const [{ data: allSessions }, { data: allNotes }] = await Promise.all([
     supabase
@@ -121,24 +143,54 @@ export default async function PlanPage({ searchParams }) {
 
       {view === "weeks" && (
         <>
-      <div className="grid grid-cols-5 gap-2 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
         {phaseSummary.map((p) => {
-          const isCurrent = plan[wIdx]?.phase === p.key;
+          const isCurrent  = plan[wIdx]?.phase === p.key;
+          const isSelected = phaseFilter === p.key;
+          // Toggle: click again to clear the filter.
+          const targetHref = isSelected
+            ? `/plan?view=${view}`
+            : `/plan?view=${view}&phase=${p.key}`;
           return (
-            <div
+            <a
               key={p.key}
-              className={`p-3 rounded-lg text-center ${isCurrent ? "border-2" : "border"}`}
+              href={targetHref}
+              className="p-3 rounded-lg text-center transition-transform hover:scale-[1.02]"
               style={{
-                background: isCurrent ? "rgba(242,104,56,.12)" : "var(--panel)",
-                borderColor: isCurrent ? "var(--accent)" : "var(--line)",
+                display: "block",
+                textDecoration: "none",
+                color: "inherit",
+                background: isSelected
+                  ? "linear-gradient(135deg, var(--accent), var(--accent2,#fccabb))"
+                  : isCurrent
+                    ? "rgba(242,104,56,.12)"
+                    : "var(--panel)",
+                border: isSelected
+                  ? "2px solid var(--accent)"
+                  : isCurrent
+                    ? "2px solid var(--accent)"
+                    : "1px solid var(--line)",
+                boxShadow: isSelected ? "0 6px 18px rgba(248,182,166,.25)" : undefined,
               }}
             >
-              <div className="font-bold text-sm">{p.name}</div>
-              <div className="text-xs text-[var(--muted)] mt-1">{p.actual} wk{p.actual > 1 ? "s" : ""}</div>
-            </div>
+              <div className="font-bold text-sm"
+                   style={{ color: isSelected ? "#1a2a30" : undefined }}>
+                {p.name}
+              </div>
+              <div className="text-xs mt-1"
+                   style={{ color: isSelected ? "rgba(26,42,48,.7)" : "var(--muted)" }}>
+                {p.actual} wk{p.actual > 1 ? "s" : ""}
+              </div>
+            </a>
           );
         })}
       </div>
+      {phaseFilter && (
+        <p className="text-xs text-[var(--muted)] mb-4">
+          Filtered to <strong className="text-[var(--text)]">{phaseSummary.find(p => p.key === phaseFilter)?.name || phaseFilter}</strong> phase.
+          {" "}<a href={`/plan?view=${view}`} className="text-[var(--accent)] font-semibold">Clear filter</a>
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-2 mb-5 text-xs">
         {["ride","strength","yoga","run","rope","rest"].map((t) => (
@@ -150,6 +202,8 @@ export default async function PlanPage({ searchParams }) {
 
       <div className="space-y-4">
         {plan.map((w, i) => {
+          // Skip weeks not in the selected phase when a filter is active.
+          if (phaseFilter && w.phase !== phaseFilter) return null;
           const isCurrent = i === wIdx;
           const stats = weekStats(i);
           const weekStartDate = dateForDay(profile?.started_at, i, 0);
