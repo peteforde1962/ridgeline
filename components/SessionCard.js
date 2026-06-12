@@ -197,11 +197,16 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
           style={{ padding: "5px 10px", fontSize: 12 }}>
           <Icon name="swap" size={13} /> Change type
         </button>
-        <button onClick={deleteSession} disabled={busy}
-          className="btn-ghost inline-flex items-center gap-1"
-          style={{ padding: "5px 10px", fontSize: 12, color: "var(--red,#e87262)" }}>
-          <Icon name="trash" size={13} /> Delete
-        </button>
+        {/* Delete is only meaningful for: extras (hard-delete), or non-rest
+            template sessions that aren't already skipped (soft-skip). Rest
+            days are part of the plan and skipping them is a no-op. */}
+        {(stored?.is_extra || (effectiveType !== "rest" && !isSkipped)) && (
+          <button onClick={deleteSession} disabled={busy}
+            className="btn-ghost inline-flex items-center gap-1"
+            style={{ padding: "5px 10px", fontSize: 12, color: "var(--red,#e87262)" }}>
+            <Icon name="trash" size={13} /> Delete
+          </button>
+        )}
         {/* Workout details button — auto-populates from the library by default */}
         {effectiveType !== "rest" && (
           <button onClick={() => showWorkout()} disabled={aiBusy} className="btn-ghost text-xs ml-auto"
