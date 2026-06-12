@@ -39,6 +39,7 @@ export default function PlanSetupForm({ userId, profile }) {
   const [planWeeks, setPlanWeeks]     = useState(profile?.plan_weeks ?? 12);
   const [goal, setGoal]               = useState(profile?.goal ?? "Race fitness");
   const [raceDate, setRaceDate]       = useState(profile?.race_date ?? "");
+  const [startedAt, setStartedAt]     = useState(profile?.started_at ?? todayISO());
   // Default to all 7 days if the profile hasn't specified (legacy rows).
   const [workoutDays, setWorkoutDays] = useState(
     Array.isArray(profile?.workout_days) && profile.workout_days.length > 0
@@ -72,10 +73,9 @@ export default function PlanSetupForm({ userId, profile }) {
       preset, weekly_hours: weeklyHours, intensity,
       plan_weeks: planWeeks, goal, race_date: raceDate || null,
       workout_days: workoutDays.length > 0 ? workoutDays : [0,1,2,3,4,5,6],
+      started_at: startedAt || todayISO(),
       updated_at: new Date().toISOString(),
     };
-    // If no plan is active yet, saving means "start the plan today."
-    if (!planActive) patch.started_at = todayISO();
     const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
     setSaving(false);
     if (error) { setError(error.message); return; }
@@ -154,6 +154,15 @@ export default function PlanSetupForm({ userId, profile }) {
           </select>
         </div>
         <div>
+          <label className="field-label">Plan start date</label>
+          <input type="date" value={startedAt || ""}
+                 onChange={(e) => setStartedAt(e.target.value)}
+                 className="input" required />
+          <p className="text-[10px] text-[var(--muted)] mt-1">
+            Can be midweek — the plan still anchors to the Monday of the week containing this date.
+          </p>
+        </div>
+        <div className="md:col-span-2">
           <label className="field-label">Race or event date (optional)</label>
           <input type="date" value={raceDate || ""} onChange={(e) => setRaceDate(e.target.value)} className="input" />
         </div>
