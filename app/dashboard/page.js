@@ -168,6 +168,9 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      {/* Activity mix — stacked bars by kind, last 7 days */}
+      <ActivityMixCard rides={weekRides || []} last7={last7} />
+
       {/* Training Load (TrainingPeaks-style) */}
       <section className="card-glass mb-4">
         <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
@@ -432,6 +435,170 @@ function TrainingLoadChart({ series }) {
         <rect width="3" height="3" y="8" fill="#f0ad4e" /><text x="6" y="11" fontSize="9" fill="var(--muted)">Fatigue</text>
         <rect width="3" height="3" y="16" fill="#f8b6a6" /><text x="6" y="19" fontSize="9" fill="var(--muted)">Form</text>
       </g>
+    </svg>
+  );
+}
+
+// Brand color per activity kind. Harmonized with the dark teal + peach palette.
+const KIND_COLOR = {
+  cycle:    "#f8b6a6",   // peach — flagship
+  run:      "#e3a87d",   // warm amber
+  hike:     "#b8a48d",   // warm tan
+  swim:     "#5fa7c4",   // teal blue
+  ski:      "#c5d8e0",   // ice
+  paddle:   "#88c4c5",   // sea green
+  strength: "#7fb582",   // soft green
+  yoga:     "#b694c4",   // soft lavender
+  rope:     "#f0ad4e",   // amber
+  climb:    "#a17e6b",   // sienna
+  other:    "#a7bcc4",   // muted teal-gray
+};
+const KIND_LABEL = {
+  cycle:    "Ride",
+  run:      "Run",
+  hike:     "Hike",
+  swim:     "Swim",
+  ski:      "Snow",
+  paddle:   "Paddle",
+  strength: "Strength",
+  yoga:     "Yoga",
+  rope:     "Rope",
+  climb:    "Climb",
+  other:    "Other",
+};
+// Render order so flagship cycling sits at the bottom of each stack.
+const KIND_ORDER = ["cycle", "run", "hike", "swim", "ski", "paddle", "strength", "yoga", "rope", "climb", "other"];
+
+function ActivityMixCard({ rides, last7 }) {
+  // Aggregate minutes by (date, kind) from the ride rows we already have.
+  const byDay = last7.map((dateStr) => {
+    const minutes = {};
+    for (const r of rides) {
+      if (r.date !== dateStr) continue;
+      const k = r.activity_kind || "other";
+      minutes[k] = (minutes[k] || 0) + (+r.minutes || 0);
+    }
+    const total = Object.values(minutes).reduce((a, b) => a + b, 0);
+    return { date: dateStr, minutes, total };
+  });
+
+  // Weekly per-kind totals for the legend.
+  const weekly = {};
+  for (const r of rides) {
+    const k = r.activity_kind || "other";
+    weekly[k] = (weekly[k] || 0) + (+r.minutes || 0);
+  }
+  const kindsPresent = KIND_ORDER.filter((k) => (weekly[k] || 0) > 0);
+  const totalMin = Object.values(weekly).reduce((a, b) => a + b, 0);
+
+  return (
+    <section className="card-glass mb-4">
+      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)]">Activity mix · last 7 days</h2>
+        <div className="text-xs">
+          <span className="text-[var(--muted)] mr-2">Total</span>
+          <span className="font-extrabold text-[var(--text)]">
+            {Math.floor(totalMin / 60)}h {totalMin % 60}m
+          </span>
+        </div>
+      </div>
+      <ActivityMixChart byDay={byDay} />
+      {kindsPresent.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3">
+          {kindsPresent.map((k) => {
+            const mins = weekly[k] || 0;
+            return (
+              <span key={k} className="inline-flex items-center gap-1.5 text-[11px]">
+                <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: KIND_COLOR[k] }} />
+                <span className="text-[var(--text)] font-semibold">{KIND_LABEL[k]}</span>
+                <span className="text-[var(--muted)]">
+                  {mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `${mins}m`}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+      )}
+      {totalMin === 0 && (
+        <p className="text-sm text-[var(--muted)] text-center mt-3">No activity recorded in the last 7 days.</p>
+      )}
+    </section>
+  );
+}
+
+function ActivityMixChart({ byDay }) {
+  const W = 700, H = 160, padX = 36, padY = 14, padBottom = 22;
+  const maxTotal = Math.max(1, ...byDay.map((d) => d.total));
+  // Round max up to a clean tick number.
+  function ceilNice(n) {
+    if (n <= 30)   return 30;
+    if (n <= 60)   return 60;
+    if (n <= 120)  return 120;
+    if (n <= 240)  return 240;
+    if (n <= 360)  return 360;
+    return Math.ceil(n / 60) * 60;
+  }
+  const yMax = ceilNice(maxTotal);
+  const yTicks = [yMax, Math.round(yMax / 2), 0];
+  const innerW = W - padX - 6;
+  const innerH = H - padY - padBottom;
+  const x = (i) => padX + (i / 7) * innerW + innerW / 14;
+  const barW = innerW / 7 - 10;
+  const y = (v) => padY + (1 - v / yMax) * innerH;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
+      {/* grid lines + y-axis (in minutes) */}
+      {yTicks.map((t, i) => (
+        <g key={i}>
+          <line x1={padX} y1={y(t)} x2={W - 6} y2={y(t)}
+                stroke="var(--line)" strokeWidth="0.5" strokeDasharray={t === 0 ? "0" : "2,3"} />
+          <text x={padX - 6} y={y(t) + 3} textAnchor="end" fontSize="9" fill="var(--muted)">
+            {t >= 60 ? `${Math.floor(t/60)}h` : `${t}m`}
+          </text>
+        </g>
+      ))}
+      {byDay.map((d, i) => {
+        let stackY = y(0);  // start from the baseline
+        const segments = [];
+        for (const k of KIND_ORDER) {
+          const mins = d.minutes[k] || 0;
+          if (mins === 0) continue;
+          const segH = innerH * (mins / yMax);
+          const top  = stackY - segH;
+          segments.push({ kind: k, mins, top, h: segH });
+          stackY -= segH;
+        }
+        return (
+          <g key={d.date}>
+            {segments.length === 0 ? (
+              <circle cx={x(i)} cy={H - padBottom - 2} r="2" fill="var(--line)" />
+            ) : segments.map((s, j) => {
+              const isTop = j === segments.length - 1;
+              // Round top corners only on the top-most segment for a nice pill.
+              const rx = isTop ? 3 : 0;
+              return (
+                <rect key={s.kind}
+                      x={x(i) - barW / 2} y={s.top}
+                      width={barW} height={Math.max(2, s.h)}
+                      rx={rx}
+                      fill={KIND_COLOR[s.kind]}>
+                  <title>{`${KIND_LABEL[s.kind]}: ${s.mins}m`}</title>
+                </rect>
+              );
+            })}
+            {d.total > 0 && (
+              <text x={x(i)} y={y(d.total) - 4} textAnchor="middle"
+                    fontSize="9" fontWeight="700" fill="var(--text)">
+                {d.total >= 60 ? `${Math.floor(d.total/60)}h${d.total%60 ? d.total%60 + "m" : ""}` : `${d.total}m`}
+              </text>
+            )}
+            <text x={x(i)} y={H - 6} textAnchor="middle" fontSize="10" fill="var(--muted)">
+              {new Date(d.date).toLocaleDateString(undefined, { weekday: "short" })}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }
