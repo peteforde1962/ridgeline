@@ -56,8 +56,14 @@ export default function SkillsForm({ userId, ratings, focusSkills }) {
       {SKILLS.map((skill) => {
         const v = values[skill.key];
         const isFocused = focus.includes(skill.key);
+        const tier = v <= 3 ? "Novice" : v <= 6 ? "Intermediate" : v <= 8 ? "Advanced" : "Pro";
+        // Map rating to a fill % so the bar visually mirrors the slider position.
+        const pct = ((v - 1) / 9) * 100;
         return (
-          <div key={skill.key} className="card">
+          <div
+            key={skill.key}
+            className={isFocused ? "skill-card card-glass skill-card--focused" : "skill-card card-glass"}
+          >
             <div className="flex items-center justify-between mb-2 gap-2">
               <div>
                 <div className="font-bold">{skill.label}</div>
@@ -71,22 +77,27 @@ export default function SkillsForm({ userId, ratings, focusSkills }) {
                 {isFocused ? "Focused ★" : "Focus"}
               </button>
             </div>
-            <input
-              type="range" min={1} max={10} value={v}
-              onChange={(e) => setRating(skill.key, +e.target.value)}
-              className="w-full accent-[var(--accent)]"
-            />
+
+            {/* Glassy track behind the slider so the level reads at a glance. */}
+            <div className="skill-track">
+              <div className="skill-track-fill" style={{ width: `${pct}%` }} />
+              <input
+                type="range" min={1} max={10} value={v}
+                onChange={(e) => setRating(skill.key, +e.target.value)}
+                className="skill-range"
+                aria-label={`${skill.label} rating`}
+              />
+            </div>
+
             <div className="flex justify-between text-xs mt-1">
               <span className="text-[var(--muted)]">Level {v} / 10</span>
-              <span className="text-[var(--muted)]">
-                {v <= 3 ? "Novice" : v <= 6 ? "Intermediate" : v <= 8 ? "Advanced" : "Pro"}
-              </span>
+              <span className="text-[var(--muted)]">{tier}</span>
             </div>
           </div>
         );
       })}
 
-      <div className="card flex items-center justify-between">
+      <div className="card-glass flex items-center justify-between">
         <div className="text-sm">
           <strong>{focus.length}</strong> / 4 focus skills selected
         </div>

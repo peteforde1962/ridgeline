@@ -23,7 +23,7 @@ export default async function SkillsPage() {
 
       <SkillsForm userId={user.id} ratings={ratings || []} focusSkills={profile?.focus_skills || []} />
 
-      <section className="card mt-6">
+      <section className="card-glass mt-6">
         <h2 className="text-lg font-bold mb-2">How this changes your plan</h2>
         <p className="text-sm text-[var(--muted)]">
           Coach AI will see your focus skills and weight workouts toward them. Endurance → more Z2 volume.
