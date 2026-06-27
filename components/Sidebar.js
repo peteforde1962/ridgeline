@@ -48,6 +48,7 @@ const TOP = [
 ];
 
 const LIBRARIES = [
+  { href: "/library",    label: "Library hub",     ico: ICONS.bars },
   { href: "/strength",   label: "Strength",        ico: ICONS.dumb },
   { href: "/yoga",       label: "Yoga & Mobility", ico: ICONS.yoga },
   { href: "/run",        label: "Running",         ico: ICONS.run },

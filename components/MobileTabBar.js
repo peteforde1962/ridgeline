@@ -22,6 +22,7 @@ const SHEET = [
   { href: "/trails",        label: "Activities",   icon: "bike" },
   { href: "/training-load", label: "Training load", icon: "chart" },
   { href: "/skills",        label: "Skills",       icon: "bars" },
+  { href: "/library",       label: "Library",      icon: "bars" },
   { href: "/strength",      label: "Strength",     icon: "dumb" },
   { href: "/yoga",          label: "Yoga",         icon: "yoga" },
   { href: "/run",           label: "Run",          icon: "run" },
