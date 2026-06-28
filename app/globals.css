@@ -422,7 +422,20 @@ th, td { padding: 10px 8px; }
   padding: 18px 12px;
   z-index: 40;
   backdrop-filter: blur(10px);
+  /* Scroll the nav when there are more rows than viewport height.
+     Without this, Admin (and other mt-auto items) clip below the fold. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
+/* Slim, on-brand scrollbar so the sidebar doesn't look like a Windows app. */
+.sb::-webkit-scrollbar { width: 6px; }
+.sb::-webkit-scrollbar-track { background: transparent; }
+.sb::-webkit-scrollbar-thumb {
+  background: rgba(248, 182, 166, 0.25);
+  border-radius: 3px;
+}
+.sb::-webkit-scrollbar-thumb:hover { background: rgba(248, 182, 166, 0.45); }
+.sb { scrollbar-width: thin; scrollbar-color: rgba(248,182,166,0.25) transparent; }
 .sb-row {
   display: flex; align-items: center; gap: 12px;
   padding: 9px 12px;

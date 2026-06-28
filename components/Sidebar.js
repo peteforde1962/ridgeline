@@ -113,21 +113,23 @@ export default function Sidebar() {
 
   return (
     <aside className="sb">
-      <a href="/dashboard" className="flex items-center gap-2 mb-6 px-3 hover:opacity-80">
+      <a href="/dashboard" className="flex items-center gap-2 mb-4 px-3 hover:opacity-80">
         <LogoMark size={32} />
         <span className="font-extrabold text-lg tracking-wide">RidgeLine</span>
       </a>
 
-      <div className="flex flex-col gap-0.5 mb-4">
+      <div className="flex flex-col gap-0.5 mb-2">
         {TOP.map((item) => <Row key={item.href} item={item} />)}
       </div>
 
       <div className="sb-section">Libraries</div>
-      <div className="flex flex-col gap-0.5 mb-4">
+      <div className="flex flex-col gap-0.5 mb-2">
         {LIBRARIES.map((item) => <Row key={item.href} item={item} />)}
       </div>
 
-      <div className="flex flex-col gap-0.5 mt-auto">
+      {/* mt-auto pushes BOTTOM to the bottom when content fits; falls
+          back to inline placement when the sidebar overflows and scrolls. */}
+      <div className="flex flex-col gap-0.5 mt-auto pt-2">
         {BOTTOM
           .filter((it) => !it.adminOnly || isAdmin)
           .filter((it) => !it.coachOnly || isCoach)
