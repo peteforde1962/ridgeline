@@ -108,12 +108,15 @@ export async function POST(request) {
 
         const { data: existingDay } = await admin
           .from("plan_sessions")
-          .select("session_idx, is_extra, swapped_to, ride_id")
+          .select("session_idx, is_extra, swapped_to, ride_id, tweak")
           .eq("user_id", profile.id)
           .eq("week_index", planIdx.weekIndex)
           .eq("day_index", planIdx.dayIndex);
 
+        // Skip rows the user previously removed — the UI hides those, so
+        // updating one would mark complete invisibly.
         const isRideRow = (s) => {
+          if (s.tweak === "removed") return false;
           if (s.swapped_to === "ride") return true;
           if (s.is_extra) return s.swapped_to === "ride";
           return day.details[s.session_idx]?.type === "ride";
@@ -124,7 +127,7 @@ export async function POST(request) {
 
         if (existingRideRow) {
           await admin.from("plan_sessions")
-            .update({ completed: true, ride_id: rideIns.id })
+            .update({ completed: true, ride_id: rideIns.id, tweak: "standard" })
             .eq("user_id", profile.id)
             .eq("week_index", planIdx.weekIndex)
             .eq("day_index", planIdx.dayIndex)

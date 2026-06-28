@@ -143,19 +143,25 @@ export async function POST(request) {
       // Auto-tick: find an existing ride-type session on this day (template OR
       // swapped OR existing extra). If one exists, attach the ride to it and mark
       // complete. Only if NONE exist do we add a new "Recorded ride" extra.
+      let tickAction = null;
+      let tickError = null;
       const planIdx = rideToPlanIndex(profile.started_at, row.date, plan.length);
       if (planIdx) {
         const day = plan[planIdx.weekIndex].days[planIdx.dayIndex];
 
         const { data: existingDay } = await supabase
           .from("plan_sessions")
-          .select("session_idx, is_extra, swapped_to, ride_id")
+          .select("session_idx, is_extra, swapped_to, ride_id, tweak")
           .eq("user_id", user.id)
           .eq("week_index", planIdx.weekIndex)
           .eq("day_index", planIdx.dayIndex);
 
         // Helper: is this session row currently a "ride"?
+        // IMPORTANT: skip rows the user previously removed — the UI hides those,
+        // so updating one would mark complete invisibly. We'd rather make a fresh
+        // row the user can see.
         const isRideRow = (s) => {
+          if (s.tweak === "removed") return false;
           if (s.swapped_to === "ride") return true;
           if (s.is_extra) return s.swapped_to === "ride";
           return day.details[s.session_idx]?.type === "ride";
@@ -166,16 +172,19 @@ export async function POST(request) {
 
         if (existingRideRow) {
           // Update the existing row in place: link the ride + mark complete.
-          await supabase.from("plan_sessions")
-            .update({ completed: true, ride_id: rideRow.id })
+          // Reset tweak to "standard" so a previously-skipped/removed row reappears.
+          const { error: tickErr } = await supabase.from("plan_sessions")
+            .update({ completed: true, ride_id: rideRow.id, tweak: "standard" })
             .eq("user_id", user.id)
             .eq("week_index", planIdx.weekIndex)
             .eq("day_index", planIdx.dayIndex)
             .eq("session_idx", existingRideRow.session_idx);
-          planTicked += 1;
+          tickError = tickErr?.message || null;
+          tickAction = `update existing session_idx=${existingRideRow.session_idx}`;
+          if (!tickErr) planTicked += 1;
         } else if (templateRideIdx >= 0) {
           // Template has a ride slot but no row yet — insert it.
-          await supabase.from("plan_sessions").upsert({
+          const { error: tickErr } = await supabase.from("plan_sessions").upsert({
             user_id: user.id,
             week_index: planIdx.weekIndex,
             day_index:  planIdx.dayIndex,
@@ -183,10 +192,12 @@ export async function POST(request) {
             completed: true, tweak: "standard",
             ride_id: rideRow.id,
           }, { onConflict: "user_id,week_index,day_index,session_idx" });
-          planTicked += 1;
+          tickError = tickErr?.message || null;
+          tickAction = `insert template session_idx=${templateRideIdx}`;
+          if (!tickErr) planTicked += 1;
         } else {
           // No ride anywhere on this day — add the marker extra.
-          await supabase.from("plan_sessions").upsert({
+          const { error: tickErr } = await supabase.from("plan_sessions").upsert({
             user_id: user.id,
             week_index: planIdx.weekIndex,
             day_index:  planIdx.dayIndex,
@@ -196,8 +207,20 @@ export async function POST(request) {
             completed: true, tweak: "standard",
             ride_id: rideRow.id,
           }, { onConflict: "user_id,week_index,day_index,session_idx" });
-          planTicked += 1;
+          tickError = tickErr?.message || null;
+          tickAction = "insert extra session_idx=100";
+          if (!tickErr) planTicked += 1;
         }
+      } else {
+        tickAction = profile.started_at
+          ? `outside plan range (ride date ${row.date}, plan starts ${profile.started_at})`
+          : "no profile.started_at — plan not set up";
+      }
+
+      // Annotate the last debug entry with what the auto-tick did.
+      if (debug.length > 0) {
+        debug[debug.length - 1].tick_action = tickAction;
+        if (tickError) debug[debug.length - 1].tick_error = tickError;
       }
     }
 
