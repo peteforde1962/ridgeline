@@ -24,6 +24,8 @@ const SHEET = [
   { href: "/skills",        label: "Skills",       icon: "bars" },
   { href: "/library",       label: "Library",      icon: "bars" },
   { href: "/strength",      label: "Strength",     icon: "dumb" },
+  { href: "/kettlebells",   label: "Kettlebells",  icon: "kettle" },
+  { href: "/bodyweight",    label: "Body Weight",  icon: "flex" },
   { href: "/yoga",          label: "Yoga",         icon: "yoga" },
   { href: "/run",           label: "Run",          icon: "run" },
   { href: "/rope",          label: "Flow rope",    icon: "rope" },

@@ -7,19 +7,39 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
-  STRENGTH_EXERCISES, YOGA_POSES, RUN_SESSIONS, FLOW_ROPE_DRILLS, SKILLS,
+  STRENGTH_EXERCISES, YOGA_POSES, RUN_SESSIONS, FLOW_ROPE_DRILLS,
 } from "@/lib/training-content";
 import PageHeader from "@/components/PageHeader";
 import Icon from "@/lib/icons";
+
+// Counts for the equipment-filtered slices of the strength library.
+const KB_COUNT = STRENGTH_EXERCISES.filter((e) => e.workout === "Kettlebell").length;
+const BW_COUNT = STRENGTH_EXERCISES.filter((e) => e.workout === "Body Weight").length;
 
 const PANELS = [
   {
     href: "/strength",
     icon: "dumb",
     title: "Strength",
-    desc: "Cycling-specific lifts — squats, deadlifts, kettlebells, core. Search by muscle group or workout.",
+    desc: "Cycling-specific lifts — squats, deadlifts, hinges, core. Search by muscle group or workout.",
     count: STRENGTH_EXERCISES.length,
     countLabel: "exercises",
+  },
+  {
+    href: "/kettlebells",
+    icon: "kettle",
+    title: "Kettlebells",
+    desc: "MTB-tuned kettlebell work. Swings, get-ups, carries — climb power and full-body control.",
+    count: KB_COUNT,
+    countLabel: "movements",
+  },
+  {
+    href: "/bodyweight",
+    icon: "flex",
+    title: "Body Weight",
+    desc: "No-equipment training — push, pull, squat, plank. Anywhere, anytime, no kit required.",
+    count: BW_COUNT,
+    countLabel: "movements",
   },
   {
     href: "/yoga",
@@ -44,22 +64,6 @@ const PANELS = [
     desc: "Coordination + shoulder mobility drills. Beginner-to-advanced flow patterns.",
     count: FLOW_ROPE_DRILLS.length,
     countLabel: "drills",
-  },
-  {
-    href: "/skills",
-    icon: "bars",
-    title: "Skills",
-    desc: "Self-rate your endurance, cornering, drops, descents. Biases your plan toward weaker areas.",
-    count: SKILLS.length,
-    countLabel: "skills",
-  },
-  {
-    href: "/videos",
-    icon: "movie",
-    title: "Videos",
-    desc: "Your uploaded ride POVs + form checks, plus linked YouTube/Vimeo tutorials.",
-    count: null,
-    countLabel: "your library",
   },
 ];
 

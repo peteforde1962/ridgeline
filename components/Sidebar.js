@@ -27,6 +27,8 @@ const ICONS = {
   bolt:    <Icon path={<path d="M13 2L4 14h7l-2 8 9-12h-7l2-8z" />} />,
   bars:    <Icon path={<><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>} />,
   dumb:    <Icon path={<><path d="M6 8v8M3 11v2M21 11v2M18 8v8M6 12h12" /></>} />,
+  kettle:  <Icon path={<><path d="M9 8V5a3 3 0 016 0v3" /><path d="M8 8h8" /><circle cx="12" cy="14" r="5.5" /></>} />,
+  flex:    <Icon path={<><path d="M5 14L13 8l5 7" /><path d="M7 12a4 3 0 014-3" /></>} />,
   yoga:    <Icon path={<><circle cx="12" cy="5" r="2" /><path d="M12 8v4M8 12h8M9 22l3-10 3 10M4 12l-2 6M20 12l2 6" /></>} />,
   run:     <Icon path={<><circle cx="14" cy="4" r="2" /><path d="M9 20l3-7-3-3 4-3 3 3h3M10 11l-3 4-2-1" /></>} />,
   rope:    <Icon path={<><path d="M5 5c4 2 4 6 0 8s-4 6 0 8" /><path d="M19 5c-4 2-4 6 0 8s4 6 0 8" /></>} />,
@@ -48,12 +50,14 @@ const TOP = [
 ];
 
 const LIBRARIES = [
-  { href: "/library",    label: "Library hub",     ico: ICONS.bars },
-  { href: "/strength",   label: "Strength",        ico: ICONS.dumb },
-  { href: "/yoga",       label: "Yoga & Mobility", ico: ICONS.yoga },
-  { href: "/run",        label: "Running",         ico: ICONS.run },
-  { href: "/rope",       label: "Flow Rope",       ico: ICONS.rope },
-  { href: "/videos",     label: "Videos",          ico: ICONS.movie },
+  { href: "/library",     label: "Library hub",     ico: ICONS.bars },
+  { href: "/strength",    label: "Strength",        ico: ICONS.dumb },
+  { href: "/kettlebells", label: "Kettlebells",     ico: ICONS.kettle },
+  { href: "/bodyweight",  label: "Body Weight",     ico: ICONS.flex },
+  { href: "/yoga",        label: "Yoga & Mobility", ico: ICONS.yoga },
+  { href: "/run",         label: "Running",         ico: ICONS.run },
+  { href: "/rope",        label: "Flow Rope",       ico: ICONS.rope },
+  { href: "/videos",      label: "Videos",          ico: ICONS.movie },
 ];
 
 const BOTTOM = [
