@@ -49,48 +49,44 @@ export default function CheckinForm({ userId, todayCheckin, today }) {
     router.refresh(); // re-render the page so history updates
   }
 
+  // Each slider's fill percentage so the glassy track behind shows the value.
+  const pct = (v) => ((v - 1) / 9) * 100;
+
+  // Tiny reusable render for the three readiness sliders so the markup stays
+  // tidy. Reuses the .skill-track / .skill-range styles from the Skills page.
+  function GlassSlider({ label, hint, value, onChange }) {
+    return (
+      <div className="mb-4">
+        <label className="field-label">
+          {label} — <span className="text-[var(--text)] font-semibold">{value}</span>
+          <span className="text-xs ml-2">{hint}</span>
+        </label>
+        <div className="skill-track">
+          <div className="skill-track-fill" style={{ width: `${pct(value)}%` }} />
+          <input
+            type="range" min={1} max={10} value={value}
+            onChange={(e) => onChange(+e.target.value)}
+            className="skill-range"
+            aria-label={label}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={handleSave} className="card">
+    <form onSubmit={handleSave} className="card-glass">
       <h2 className="text-lg font-bold mb-1">How are you feeling today?</h2>
       <p className="text-sm text-[var(--muted)] mb-5">
         30-second check-in. Tunes today's training intensity.
       </p>
 
-      <div className="mb-4">
-        <label className="field-label">
-          Sleep quality — <span className="text-[var(--text)] font-semibold">{sleep}</span>
-          <span className="text-xs ml-2">(1 awful → 10 great)</span>
-        </label>
-        <input
-          type="range" min={1} max={10} value={sleep}
-          onChange={(e) => setSleep(+e.target.value)}
-          className="w-full accent-[var(--accent)]"
-        />
-      </div>
-
-      <div className="mb-4">
-        <label className="field-label">
-          Soreness — <span className="text-[var(--text)] font-semibold">{soreness}</span>
-          <span className="text-xs ml-2">(1 fresh → 10 wrecked)</span>
-        </label>
-        <input
-          type="range" min={1} max={10} value={soreness}
-          onChange={(e) => setSoreness(+e.target.value)}
-          className="w-full accent-[var(--accent)]"
-        />
-      </div>
-
-      <div className="mb-4">
-        <label className="field-label">
-          Energy — <span className="text-[var(--text)] font-semibold">{energy}</span>
-          <span className="text-xs ml-2">(1 flat → 10 fired up)</span>
-        </label>
-        <input
-          type="range" min={1} max={10} value={energy}
-          onChange={(e) => setEnergy(+e.target.value)}
-          className="w-full accent-[var(--accent)]"
-        />
-      </div>
+      <GlassSlider label="Sleep quality" hint="(1 awful → 10 great)"
+                   value={sleep}    onChange={setSleep} />
+      <GlassSlider label="Soreness"      hint="(1 fresh → 10 wrecked)"
+                   value={soreness} onChange={setSoreness} />
+      <GlassSlider label="Energy"        hint="(1 flat → 10 fired up)"
+                   value={energy}   onChange={setEnergy} />
 
       <div className="mb-5">
         <label className="field-label">Notes (optional)</label>
@@ -101,7 +97,7 @@ export default function CheckinForm({ userId, todayCheckin, today }) {
       </div>
 
       <div
-        className="rounded-lg p-3 mb-5 text-sm border"
+        className="rounded-lg p-3 mb-5 text-sm border backdrop-blur-sm"
         style={{
           background: signal.tone === "good"   ? "rgba(78,104,81,.18)"
                     : signal.tone === "warn"   ? "rgba(215,106,74,.18)"

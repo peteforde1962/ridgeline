@@ -58,7 +58,7 @@ export default async function CheckinPage() {
         <CheckinForm userId={user.id} todayCheckin={todayCheckin} today={today} />
       </div>
 
-      <section className="card">
+      <section className="card-glass">
         <h2 className="text-lg font-bold mb-3">Recent check-ins</h2>
         {!history || history.length === 0 ? (
           <p className="text-[var(--muted)] text-sm">
