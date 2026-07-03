@@ -26,7 +26,19 @@ export default function SignupPage() {
     e.preventDefault();
     setError(""); setInfo(""); setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    // Pass emailRedirectTo explicitly so Supabase confirmation links point to
+    // the current host (production, preview, or localhost) — not the project's
+    // Site URL default. Requires the URL to be in the Redirect URLs allowlist
+    // under Supabase → Authentication → URL Configuration.
+    const redirectTo = typeof window !== "undefined"
+      ? `${window.location.origin}/dashboard`
+      : undefined;
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: redirectTo },
+    });
     if (error) { setLoading(false); setError(error.message); return; }
 
     // If we got a session immediately, update the role on the auto-created profile.

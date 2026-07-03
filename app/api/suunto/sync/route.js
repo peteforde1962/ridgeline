@@ -52,20 +52,24 @@ export async function POST(request) {
         const day = plan[planIdx.weekIndex].days[planIdx.dayIndex];
         const { data: existingDay } = await supabase
           .from("plan_sessions")
-          .select("session_idx, is_extra, swapped_to, ride_id")
+          .select("session_idx, is_extra, swapped_to, ride_id, tweak")
           .eq("user_id", user.id)
           .eq("week_index", planIdx.weekIndex)
           .eq("day_index", planIdx.dayIndex);
 
-        const isRideRow = (s) =>
-          s.swapped_to === "ride" ||
-          (s.is_extra ? s.swapped_to === "ride" : day.details[s.session_idx]?.type === "ride");
+        // Skip rows the user previously removed — the UI hides those.
+        const isRideRow = (s) => {
+          if (s.tweak === "removed") return false;
+          return s.swapped_to === "ride" ||
+            (s.is_extra ? s.swapped_to === "ride" : day.details[s.session_idx]?.type === "ride");
+        };
 
         const existing = (existingDay || []).find(isRideRow);
         const templateRideIdx = day.details.findIndex((s) => s.type === "ride");
 
         if (existing) {
-          await supabase.from("plan_sessions").update({ completed: true, ride_id: rideRow.id })
+          await supabase.from("plan_sessions")
+            .update({ completed: true, ride_id: rideRow.id, tweak: "standard" })
             .eq("user_id", user.id).eq("week_index", planIdx.weekIndex)
             .eq("day_index", planIdx.dayIndex).eq("session_idx", existing.session_idx);
           ticked++;
