@@ -198,7 +198,8 @@ export default async function DashboardPage() {
           keeps the day-by-day list on the right. */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         {/* Recovery status — compact. The status text already carries the
-            traffic-light color, so no outer border tint is needed. */}
+            traffic-light color, so no outer border tint is needed.
+            Icon per state stays on-brand: bolt = ready, heart = easy, moon = recovering. */}
         <div className="card">
           <div className="flex items-center gap-2 mb-1">
             <span
@@ -208,11 +209,20 @@ export default async function DashboardPage() {
             />
             <h2 className="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">Recovery status</h2>
           </div>
-          <p className="font-bold text-sm" style={{ color: recovery.color }}>
-            {recovery.status === "ready" ? "✓ Ready for a hard effort"
-             : recovery.status === "almost" ? "⏳ Take it easy today"
-             : "🛑 Recovering — easy or rest"}
-          </p>
+          <div className="flex items-center gap-2">
+            <Icon
+              name={recovery.status === "ready" ? "bolt"
+                   : recovery.status === "almost" ? "heart"
+                   : "moon"}
+              size={16}
+              stroke={recovery.color}
+            />
+            <p className="font-bold text-sm" style={{ color: recovery.color }}>
+              {recovery.status === "ready" ? "Ready for a hard effort"
+               : recovery.status === "almost" ? "Take it easy today"
+               : "Recovering — easy or rest"}
+            </p>
+          </div>
           <p className="text-xs text-[var(--muted)] mt-1">{recovery.label}</p>
           {recovery.hardest && (
             <div className="text-[11px] text-[var(--muted)] mt-2 pt-2" style={{ borderTop: "1px solid var(--line)" }}>
