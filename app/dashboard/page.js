@@ -192,24 +192,53 @@ export default async function DashboardPage() {
         </p>
       </section>
 
-      {/* Recovery status */}
-      <section className="card mb-4" style={{ borderLeft: `4px solid ${recovery.color}` }}>
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-1">Recovery status</h2>
-            <p className="font-bold" style={{ color: recovery.color }}>
-              {recovery.status === "ready" ? "✓ Ready for a hard effort"
-               : recovery.status === "almost" ? "⏳ Take it easy today"
-               : "🛑 Recovering — easy or rest"}
-            </p>
-            <p className="text-sm text-[var(--muted)] mt-1">{recovery.label}</p>
-          </div>
+      {/* Recovery + Heatmap + Recent activity — compact 3-column row.
+          On mobile they stack. Recovery is the compact left card, heatmap is
+          the visual middle showing 90 days at a glance, and recent activity
+          keeps the day-by-day list on the right. */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        {/* Recovery status — compact */}
+        <div className="card" style={{ borderLeft: `4px solid ${recovery.color}` }}>
+          <h2 className="text-xs font-bold uppercase tracking-wide text-[var(--muted)] mb-1">Recovery status</h2>
+          <p className="font-bold text-sm" style={{ color: recovery.color }}>
+            {recovery.status === "ready" ? "✓ Ready for a hard effort"
+             : recovery.status === "almost" ? "⏳ Take it easy today"
+             : "🛑 Recovering — easy or rest"}
+          </p>
+          <p className="text-xs text-[var(--muted)] mt-1">{recovery.label}</p>
           {recovery.hardest && (
-            <div className="text-xs text-[var(--muted)] text-right">
-              <div>Hardest recent ride:</div>
-              <div className="text-[var(--text)] font-semibold">{recovery.hardest.intensity}</div>
+            <div className="text-[11px] text-[var(--muted)] mt-2 pt-2" style={{ borderTop: "1px solid var(--line)" }}>
+              <div>Hardest recent: <span className="text-[var(--text)] font-semibold">{recovery.hardest.intensity}</span></div>
               <div>{recovery.hardest.km || "?"}km · {recovery.hardest.elev_m || "?"}m · {recovery.hardest.minutes}min</div>
             </div>
+          )}
+        </div>
+
+        {/* Activity heatmap — GitHub-style 90-day grid, cells colored by daily minutes. */}
+        <ActivityHeatmap rides={allRides || []} />
+
+        {/* Recent activity — the same list that used to live at the bottom
+            of the page, now inline with Recovery + Heatmap. */}
+        <div className="card">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-[var(--muted)] mb-2">Recent activity</h2>
+          {(weekRides || []).length === 0 ? (
+            <p className="text-xs text-[var(--muted)]">No activity in the last 7 days.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {weekRides.slice(0, 5).map((r) => {
+                const trailName = r.ride_trails?.[0]?.trails?.name || r.notes?.split("·")[0]?.trim() || "Activity";
+                return (
+                  <li key={r.id} className="flex justify-between text-xs gap-2">
+                    <span className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <ActivityBadge sportType={r.sport_type} kind={r.activity_kind} />
+                      <span className="text-[var(--muted)]">{r.date.slice(5)}</span>
+                      <span className="font-semibold truncate">{trailName}</span>
+                    </span>
+                    <span className="text-[var(--muted)] whitespace-nowrap">{r.km}km · {r.minutes}m</span>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       </section>
@@ -228,54 +257,30 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div className="card-glass">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Top trails · last 30d</h2>
-          {topTrails.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">No trail-linked rides yet.</p>
-          ) : (
-            <ol className="space-y-2">
-              {topTrails.map((t, i) => {
-                const maxMin = topTrails[0].minutes;
-                const pct = Math.max(8, (t.minutes / maxMin) * 100);
-                return (
-                  <li key={t.name}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span><span className="text-[var(--muted)] mr-2">#{i + 1}</span><span className="font-semibold">{t.name}</span></span>
-                      <span className="text-[var(--muted)]">{t.rides} ride{t.rides === 1 ? "" : "s"} · {Math.round(t.minutes / 60)}h</span>
-                    </div>
-                    <div className="h-1.5 rounded-full" style={{ background: "var(--bg2)" }}>
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--accent), var(--accent2,#fccabb))" }} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </div>
-
-        <div className="card">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Recent activity</h2>
-          {(weekRides || []).length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">No activity in the last 7 days.</p>
-          ) : (
-            <ul className="space-y-2">
-              {weekRides.slice(0, 5).map((r) => {
-                const trailName = r.ride_trails?.[0]?.trails?.name || r.notes?.split("·")[0]?.trim() || "Activity";
-                return (
-                  <li key={r.id} className="flex justify-between text-sm gap-2">
-                    <span className="flex items-center gap-2 min-w-0 flex-1">
-                      <ActivityBadge sportType={r.sport_type} kind={r.activity_kind} />
-                      <span className="text-[var(--muted)]">{r.date.slice(5)}</span>
-                      <span className="font-semibold truncate">{trailName}</span>
-                    </span>
-                    <span className="text-[var(--muted)] whitespace-nowrap">{r.km}km · {r.minutes}min · {r.elev_m || 0}m</span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+      {/* Top trails — now full-width (Recent activity moved up beside Recovery). */}
+      <section className="card-glass mb-4">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mb-3">Top trails · last 30d</h2>
+        {topTrails.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">No trail-linked rides yet.</p>
+        ) : (
+          <ol className="space-y-2">
+            {topTrails.map((t, i) => {
+              const maxMin = topTrails[0].minutes;
+              const pct = Math.max(8, (t.minutes / maxMin) * 100);
+              return (
+                <li key={t.name}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span><span className="text-[var(--muted)] mr-2">#{i + 1}</span><span className="font-semibold">{t.name}</span></span>
+                    <span className="text-[var(--muted)]">{t.rides} ride{t.rides === 1 ? "" : "s"} · {Math.round(t.minutes / 60)}h</span>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ background: "var(--bg2)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--accent), var(--accent2,#fccabb))" }} />
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
       </section>
     </main>
   );
@@ -675,6 +680,142 @@ function DistanceChart({ kmByDay, maxKm, totalKm }) {
             </g>
           );
         })}
+      </svg>
+    </div>
+  );
+}
+
+// GitHub-style contribution graph but for activity minutes.
+// 90-day rolling window, columns = weeks (Mon anchor), rows = days of week.
+// Cell intensity scales with total minutes on that day.
+function ActivityHeatmap({ rides }) {
+  const DAYS = 90;
+  // Cell + spacing sizing (SVG units).
+  const CELL = 12, GAP = 3, LEFT_PAD = 18, TOP_PAD = 14;
+
+  // Snap start to the Monday of the week containing (today - 89 days).
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (DAYS - 1));
+  const dowOffset = (start.getDay() + 6) % 7; // 0=Mon..6=Sun
+  start.setDate(start.getDate() - dowOffset);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const totalDays = Math.floor((today - start) / 86400_000) + 1;
+  const weeks = Math.ceil(totalDays / 7);
+
+  // Sum minutes per date across all rides (all activity types).
+  const minutesByDate = {};
+  for (const r of (rides || [])) {
+    minutesByDate[r.date] = (minutesByDate[r.date] || 0) + (+r.minutes || 0);
+  }
+
+  // Build cell array.
+  const cells = [];
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    cells.push({
+      dateStr,
+      week: Math.floor(i / 7),
+      dow: i % 7,
+      minutes: minutesByDate[dateStr] || 0,
+      // Include future padding cells (past today) as invisible.
+      isFuture: d > today,
+    });
+  }
+
+  // Bucket minutes into 5 intensity levels — 0, light, medium, strong, max.
+  function intensity(m) {
+    if (m === 0)  return 0;
+    if (m <= 30)  return 1;
+    if (m <= 60)  return 2;
+    if (m <= 120) return 3;
+    return 4;
+  }
+  const LEVEL_COLORS = [
+    "rgba(255,255,255,0.06)",     // 0 — very faint
+    "rgba(248,182,166,0.30)",     // 1 — light peach
+    "rgba(248,182,166,0.55)",     // 2 — mid peach
+    "rgba(248,182,166,0.80)",     // 3 — strong peach
+    "var(--accent)",              // 4 — full peach accent
+  ];
+
+  // Month labels — one per unique month across the top row.
+  const monthLabels = [];
+  let lastMonth = -1;
+  for (let w = 0; w < weeks; w++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + w * 7);
+    if (d.getMonth() !== lastMonth) {
+      monthLabels.push({ week: w, label: d.toLocaleDateString(undefined, { month: "short" }) });
+      lastMonth = d.getMonth();
+    }
+  }
+
+  const W = LEFT_PAD + weeks * (CELL + GAP);
+  const H = TOP_PAD + 7 * (CELL + GAP) + 22; // extra room for legend
+
+  return (
+    <div className="card-glass">
+      <div className="flex items-baseline justify-between mb-2 flex-wrap gap-1">
+        <h2 className="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">Activity · last 90d</h2>
+        <span className="text-[10px] text-[var(--muted)]">minutes / day</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
+        {/* Month labels along the top */}
+        {monthLabels.map((m) => (
+          <text key={`m-${m.week}`}
+                x={LEFT_PAD + m.week * (CELL + GAP)}
+                y={TOP_PAD - 4}
+                fontSize="8" fill="var(--muted)">
+            {m.label}
+          </text>
+        ))}
+        {/* Weekday labels — only M, W, F to save space */}
+        {[[0, "M"], [2, "W"], [4, "F"]].map(([row, label]) => (
+          <text key={`d-${row}`}
+                x={LEFT_PAD - 4}
+                y={TOP_PAD + row * (CELL + GAP) + CELL - 2}
+                textAnchor="end"
+                fontSize="8" fill="var(--muted)">
+            {label}
+          </text>
+        ))}
+        {/* Cells */}
+        {cells.map((c) => {
+          if (c.isFuture) return null;
+          const level = intensity(c.minutes);
+          return (
+            <rect
+              key={c.dateStr}
+              x={LEFT_PAD + c.week * (CELL + GAP)}
+              y={TOP_PAD + c.dow * (CELL + GAP)}
+              width={CELL} height={CELL}
+              rx="2" ry="2"
+              fill={LEVEL_COLORS[level]}
+            >
+              <title>{c.dateStr} — {c.minutes} min</title>
+            </rect>
+          );
+        })}
+        {/* Legend along the bottom */}
+        <g transform={`translate(${LEFT_PAD}, ${TOP_PAD + 7 * (CELL + GAP) + 8})`}>
+          <text x="0" y="8" fontSize="8" fill="var(--muted)">Less</text>
+          {LEVEL_COLORS.map((color, i) => (
+            <rect
+              key={`legend-${i}`}
+              x={24 + i * (CELL + 2)}
+              y="0"
+              width={CELL - 2} height={CELL - 2}
+              rx="2" ry="2"
+              fill={color}
+            />
+          ))}
+          <text x={24 + LEVEL_COLORS.length * (CELL + 2) + 2} y="8" fontSize="8" fill="var(--muted)">More</text>
+        </g>
       </svg>
     </div>
   );
