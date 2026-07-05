@@ -197,9 +197,17 @@ export default async function DashboardPage() {
           the visual middle showing 90 days at a glance, and recent activity
           keeps the day-by-day list on the right. */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        {/* Recovery status — compact */}
-        <div className="card" style={{ borderLeft: `4px solid ${recovery.color}` }}>
-          <h2 className="text-xs font-bold uppercase tracking-wide text-[var(--muted)] mb-1">Recovery status</h2>
+        {/* Recovery status — compact. The status text already carries the
+            traffic-light color, so no outer border tint is needed. */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className="inline-block rounded-full"
+              style={{ width: 8, height: 8, background: recovery.color, boxShadow: `0 0 6px ${recovery.color}66` }}
+              aria-hidden
+            />
+            <h2 className="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">Recovery status</h2>
+          </div>
           <p className="font-bold text-sm" style={{ color: recovery.color }}>
             {recovery.status === "ready" ? "✓ Ready for a hard effort"
              : recovery.status === "almost" ? "⏳ Take it easy today"
