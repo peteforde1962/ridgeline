@@ -35,7 +35,7 @@ export default async function PlanDayPage({ params }) {
 
   const [{ data: storedSessions }, { data: noteRow }, { data: dayRides }] = await Promise.all([
     supabase.from("plan_sessions")
-      .select("id,session_idx,completed,tweak,swapped_to,is_extra,custom_name,custom_notes,ride_id,ai_workout,prescribed_by_coach_id")
+      .select("id,session_idx,completed,tweak,swapped_to,is_extra,custom_name,custom_notes,ride_id,ai_workout,prescribed_by_coach_id,planned_minutes")
       .eq("user_id", user.id).eq("week_index", wIdx).eq("day_index", dIdx),
     supabase.from("plan_day_notes")
       .select("note").eq("user_id", user.id).eq("week_index", wIdx).eq("day_index", dIdx).maybeSingle(),

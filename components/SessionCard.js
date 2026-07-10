@@ -39,6 +39,11 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
   const [aiBusy, setAiBusy]       = useState(false);
   const [busy, setBusy]           = useState(false);
   const [showSwap, setShowSwap]   = useState(false);
+  // Planned duration in minutes. Null = no duration set (template sessions bake
+  // duration into the name string; extras can add one explicitly).
+  const [plannedMinutes, setPlannedMinutes] = useState(stored?.planned_minutes ?? null);
+  const [editingMinutes, setEditingMinutes] = useState(false);
+  const [minutesDraft, setMinutesDraft]     = useState(stored?.planned_minutes ?? "");
 
   const effectiveType = swappedTo || session.type;
   const isSkipped = tweak === "skipped";
@@ -69,6 +74,9 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
           completed: next.completed ?? completed,
           tweak: next.tweak ?? tweak,
           swapped_to: next.swapped_to !== undefined ? next.swapped_to : swappedTo,
+          // Only send planned_minutes when caller explicitly changed it — undefined
+          // means "leave the DB value alone."
+          ...(next.planned_minutes !== undefined ? { planned_minutes: next.planned_minutes } : {}),
         },
         { onConflict: "user_id,week_index,day_index,session_idx" }
       );
@@ -79,6 +87,14 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
   async function toggleComplete() { const next = !completed; setCompleted(next); await persist({ completed: next }); }
   async function setTweakOpt(opt) { setTweak(opt); await persist({ tweak: opt }); }
   async function swapType(newType) { setSwappedTo(newType); setShowSwap(false); await persist({ swapped_to: newType }); }
+
+  // Save the duration editor. Empty input clears it back to null.
+  async function saveMinutes() {
+    const parsed = minutesDraft === "" ? null : Math.max(1, Math.round(+minutesDraft));
+    setPlannedMinutes(parsed);
+    setEditingMinutes(false);
+    await persist({ planned_minutes: parsed });
+  }
 
   // Delete behaves differently based on session origin:
   //   - Extras (user-added, coach-prescribed, or Strava auto-imported) hard-delete the plan_sessions row.
@@ -180,6 +196,48 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
       )}
       {!linkedRide && effectiveSession.notes && (
         <p className="text-sm text-[var(--muted)] mb-3">{effectiveSession.notes}</p>
+      )}
+
+      {/* Planned duration — inline editor. Not shown for rest days.
+          For sessions linked to an actual ride we show its real minutes;
+          otherwise show the planned duration or a "Set duration" prompt. */}
+      {effectiveType !== "rest" && !linkedRide && (
+        <div className="inline-flex items-center gap-2 text-xs mb-3">
+          <span className="text-[var(--muted)]">Planned duration:</span>
+          {editingMinutes ? (
+            <>
+              <input
+                type="number" min={1} step={5}
+                value={minutesDraft}
+                onChange={(e) => setMinutesDraft(e.target.value)}
+                className="input"
+                style={{ width: 70, padding: "3px 8px", fontSize: 12 }}
+                placeholder="min"
+                autoFocus
+                inputMode="numeric"
+                onKeyDown={(e) => { if (e.key === "Enter") saveMinutes(); if (e.key === "Escape") { setEditingMinutes(false); setMinutesDraft(plannedMinutes ?? ""); } }}
+              />
+              <button onClick={saveMinutes} disabled={busy}
+                      className="btn-primary" style={{ padding: "3px 10px", fontSize: 11 }}>
+                Save
+              </button>
+              <button onClick={() => { setEditingMinutes(false); setMinutesDraft(plannedMinutes ?? ""); }}
+                      className="btn-ghost" style={{ padding: "3px 10px", fontSize: 11 }}>
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button onClick={() => { setEditingMinutes(true); setMinutesDraft(plannedMinutes ?? ""); }}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-semibold"
+                    style={{
+                      color: plannedMinutes ? "var(--text)" : "var(--accent)",
+                      background: plannedMinutes ? "rgba(248,182,166,.12)" : "transparent",
+                      border: `1px solid ${plannedMinutes ? "rgba(248,182,166,.35)" : "var(--line)"}`,
+                    }}>
+              {plannedMinutes ? `${plannedMinutes} min` : "+ Set duration"}
+            </button>
+          )}
+        </div>
       )}
 
       <div className="flex flex-wrap gap-2 items-center mb-2">

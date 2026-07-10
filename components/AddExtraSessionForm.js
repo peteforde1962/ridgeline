@@ -17,12 +17,16 @@ export default function AddExtraSessionForm({ userId, weekIndex, dayIndex, nextS
   const [type, setType] = useState("strength");
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
+  const [minutes, setMinutes] = useState("");   // duration in minutes; blank = no target
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   async function save(e) {
     e.preventDefault();
     setBusy(true); setError("");
+
+    // Parse minutes — accept empty as null so the user isn't forced to set one.
+    const parsedMinutes = minutes === "" ? null : Math.max(1, Math.round(+minutes));
 
     const { error: err } = await supabase.from("plan_sessions").insert({
       user_id: userId,
@@ -33,6 +37,7 @@ export default function AddExtraSessionForm({ userId, weekIndex, dayIndex, nextS
       swapped_to: type,
       custom_name: name.trim() || null,
       custom_notes: notes.trim() || null,
+      planned_minutes: parsedMinutes,
       completed: false,
       tweak: "standard",
     });
@@ -41,7 +46,7 @@ export default function AddExtraSessionForm({ userId, weekIndex, dayIndex, nextS
     if (err) { setError(err.message); return; }
 
     setOpen(false);
-    setName(""); setNotes(""); setType("strength");
+    setName(""); setNotes(""); setMinutes(""); setType("strength");
     router.refresh();
   }
 
@@ -60,7 +65,7 @@ export default function AddExtraSessionForm({ userId, weekIndex, dayIndex, nextS
         <button type="button" onClick={() => setOpen(false)} className="text-[var(--muted)] hover:text-[var(--text)]">✕</button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         <div>
           <label className="field-label">Type</label>
           <select value={type} onChange={(e) => setType(e.target.value)} className="input">
@@ -71,6 +76,16 @@ export default function AddExtraSessionForm({ userId, weekIndex, dayIndex, nextS
           <label className="field-label">Name (optional)</label>
           <input value={name} onChange={(e) => setName(e.target.value)} className="input"
                  placeholder="BJJ class, swim, climbing, ..." />
+        </div>
+        <div>
+          <label className="field-label">Duration (min)</label>
+          <input
+            type="number" min={1} step={5}
+            value={minutes} onChange={(e) => setMinutes(e.target.value)}
+            className="input"
+            placeholder="e.g. 45"
+            inputMode="numeric"
+          />
         </div>
       </div>
 
