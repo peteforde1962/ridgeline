@@ -207,7 +207,7 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
           {editingMinutes ? (
             <>
               <input
-                type="number" min={1} step={5}
+                type="number" min={1} step={1}
                 value={minutesDraft}
                 onChange={(e) => setMinutesDraft(e.target.value)}
                 className="input"

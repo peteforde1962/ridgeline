@@ -38,7 +38,7 @@ export default async function DashboardPage() {
     supabase.from("rides")
       .select("date, km, elev_m, minutes, avg_hr, avg_watts, weighted_avg_watts, suffer_score")
       .eq("user_id", user.id),
-    supabase.from("plan_sessions").select("week_index, day_index, session_idx, completed").eq("user_id", user.id),
+    supabase.from("plan_sessions").select("week_index, day_index, session_idx, completed, swapped_to, planned_minutes, ride_id, is_extra").eq("user_id", user.id),
     supabase.from("check_ins").select("date, sleep, soreness, energy").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: true }),
   ]);
 
@@ -105,6 +105,47 @@ export default async function DashboardPage() {
   const load = currentLoad(loadSeries);
   const form = formInterpretation(load.form);
 
+  // Synthesize "activity" rows from completed plan sessions with a planned
+  // duration. Lets manually-added workouts (strength, yoga, etc.) show up on
+  // the Activity mix chart alongside synced rides. Dedupe by ride_id so a
+  // plan session already auto-ticked from a Strava ride doesn't double-count.
+  const SESSION_TYPE_TO_KIND = {
+    ride: "cycle", strength: "strength", yoga: "yoga",
+    run: "run", rope: "rope",
+  };
+  function typeForSession(s) {
+    if (s.swapped_to) return s.swapped_to;
+    if (s.is_extra) return s.swapped_to || null; // extras store their type in swapped_to
+    return plan[s.week_index]?.days?.[s.day_index]?.details?.[s.session_idx]?.type || null;
+  }
+  const planCompletions = (planSessions || [])
+    .filter((s) => s.completed && s.planned_minutes && !s.ride_id)
+    .map((s) => {
+      const type = typeForSession(s);
+      const kind = SESSION_TYPE_TO_KIND[type];
+      if (!kind) return null;
+      const date = plan[s.week_index] ? undefined : undefined; // placeholder
+      const w = s.week_index, d = s.day_index;
+      // Compute the calendar date from the plan grid using started_at + offset.
+      const startedAt = profile?.started_at;
+      if (!startedAt) return null;
+      const anchor = new Date(startedAt + "T00:00:00");
+      const dow = anchor.getDay();
+      const offsetToMon = (dow + 6) % 7;
+      anchor.setDate(anchor.getDate() - offsetToMon + w * 7 + d);
+      return {
+        date: anchor.toISOString().slice(0, 10),
+        minutes: s.planned_minutes,
+        activity_kind: kind,
+      };
+    })
+    .filter(Boolean);
+
+  // Filter completions to the current 7-day window so the Activity mix stays
+  // focused; the chart already only shows last 7 days.
+  const completionsThisWeek = planCompletions.filter((c) => c.date >= sevenDaysAgo);
+  const activityMixSource = [...(weekRides || []), ...completionsThisWeek];
+
   return (
     <main className="min-h-screen p-6 max-w-6xl mx-auto">
       <header className="flex items-center justify-between mb-6">
@@ -168,8 +209,10 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Activity mix — stacked bars by kind, last 7 days */}
-      <ActivityMixCard rides={weekRides || []} last7={last7} />
+      {/* Activity mix — stacked bars by kind, last 7 days. Now includes
+          completed plan workouts (e.g. manually-added strength/yoga) alongside
+          synced rides so the chart reflects everything you actually did. */}
+      <ActivityMixCard rides={activityMixSource} last7={last7} />
 
       {/* Training Load (TrainingPeaks-style) */}
       <section className="card-glass mb-4">

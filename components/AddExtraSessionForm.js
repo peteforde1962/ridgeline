@@ -80,7 +80,7 @@ export default function AddExtraSessionForm({ userId, weekIndex, dayIndex, nextS
         <div>
           <label className="field-label">Duration (min)</label>
           <input
-            type="number" min={1} step={5}
+            type="number" min={1} step={1}
             value={minutes} onChange={(e) => setMinutes(e.target.value)}
             className="input"
             placeholder="e.g. 45"
