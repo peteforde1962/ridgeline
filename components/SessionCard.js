@@ -266,8 +266,10 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
             <Icon name="trash" size={13} /> Delete
           </button>
         )}
-        {/* Workout details button — auto-populates from the library by default */}
-        {effectiveType !== "rest" && (
+        {/* Workout details button — hidden when the session already has an
+            actual ride attached (the AI workout suggestion is nonsensical
+            for something that already happened). Also hidden on rest days. */}
+        {effectiveType !== "rest" && !linkedRide && (
           <button onClick={() => showWorkout()} disabled={aiBusy} className="btn-ghost text-xs ml-auto"
             style={{ padding: "5px 10px" }}>
             {aiBusy ? "Loading…" : aiWorkout ? "Show workout" : "Show workout"}
