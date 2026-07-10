@@ -54,11 +54,14 @@ export default async function DashboardPage() {
   const todaySessions = week?.days?.[dIdx]?.details || [];
   const todayIsRest = todaySessions.length === 0;
 
-  const completedThisWeek = (planSessions || []).filter(s => s.week_index === wIdx && s.completed).length;
+  // Filter out rows the user deleted (tweak="removed"). Those are soft-deleted
+  // in the UI but still exist in the DB and could inflate our counters.
+  const activeSessions = (planSessions || []).filter(s => s.tweak !== "removed");
+  const completedThisWeek = activeSessions.filter(s => s.week_index === wIdx && s.completed).length;
   const scheduledThisWeek = week
     ? week.days.reduce((a, d) => a + d.details.filter(s => s.type !== "rest").length, 0)
     : 0;
-  const overallDone = (planSessions || []).filter(s => s.completed).length;
+  const overallDone = activeSessions.filter(s => s.completed).length;
   const totalScheduled = plan.reduce((a, w) => a + w.days.reduce((b, d) => b + d.details.filter(s => s.type !== "rest").length, 0), 0);
 
   const kmThisWeek    = (weekRides || []).reduce((a, r) => a + (+r.km || 0), 0);
@@ -119,7 +122,7 @@ export default async function DashboardPage() {
     return plan[s.week_index]?.days?.[s.day_index]?.details?.[s.session_idx]?.type || null;
   }
   const planCompletions = (planSessions || [])
-    .filter((s) => s.completed && s.planned_minutes && !s.ride_id)
+    .filter((s) => s.completed && s.planned_minutes && !s.ride_id && s.tweak !== "removed")
     .map((s) => {
       const type = typeForSession(s);
       const kind = SESSION_TYPE_TO_KIND[type];
@@ -211,8 +214,9 @@ export default async function DashboardPage() {
 
       {/* Activity mix — stacked bars by kind, last 7 days. Now includes
           completed plan workouts (e.g. manually-added strength/yoga) alongside
-          synced rides so the chart reflects everything you actually did. */}
-      <ActivityMixCard rides={activityMixSource} last7={last7} />
+          synced rides so the chart reflects everything you actually did.
+          Bars are clickable and drill into that day's plan detail. */}
+      <ActivityMixCard rides={activityMixSource} last7={last7} startedAt={profile?.started_at} />
 
       {/* Training Load (TrainingPeaks-style) */}
       <section className="card-glass mb-4">
@@ -535,8 +539,9 @@ const KIND_LABEL = {
 // Render order so flagship cycling sits at the bottom of each stack.
 const KIND_ORDER = ["cycle", "run", "hike", "swim", "ski", "paddle", "strength", "yoga", "rope", "climb", "other"];
 
-function ActivityMixCard({ rides, last7 }) {
+function ActivityMixCard({ rides, last7, startedAt }) {
   // Aggregate minutes by (date, kind) from the ride rows we already have.
+  // Also precompute a link back to the plan day so clicking a bar drills in.
   const byDay = last7.map((dateStr) => {
     const minutes = {};
     for (const r of rides) {
@@ -545,7 +550,22 @@ function ActivityMixCard({ rides, last7 }) {
       minutes[k] = (minutes[k] || 0) + (+r.minutes || 0);
     }
     const total = Object.values(minutes).reduce((a, b) => a + b, 0);
-    return { date: dateStr, minutes, total };
+
+    // Compute the plan (weekIndex, dayIndex) for this date so we can link
+    // the bar to /plan/w/d. Uses same Monday-anchor rule as dateForDay.
+    let href = null;
+    if (startedAt) {
+      const start = new Date(startedAt + "T00:00:00");
+      const offsetToMon = (start.getDay() + 6) % 7;
+      start.setDate(start.getDate() - offsetToMon);
+      const day = new Date(dateStr + "T00:00:00");
+      const diffDays = Math.floor((day - start) / 86400_000);
+      if (diffDays >= 0) {
+        href = `/plan/${Math.floor(diffDays / 7)}/${diffDays % 7}`;
+      }
+    }
+
+    return { date: dateStr, minutes, total, href };
   });
 
   // Weekly per-kind totals for the legend.
@@ -635,22 +655,30 @@ function ActivityMixChart({ byDay }) {
           segments.push({ kind: k, mins, top, h: segH });
           stackY -= segH;
         }
-        return (
-          <g key={d.date}>
+        // Build the tooltip title with the per-kind breakdown so the whole
+        // day's activity is visible on hover, not just one segment.
+        const dayTitle = segments.length > 0
+          ? `${d.date}\n${segments.map((s) => `${KIND_LABEL[s.kind]}: ${s.mins}m`).join("\n")}\nTotal: ${d.total >= 60 ? `${Math.floor(d.total/60)}h${d.total%60 ? d.total%60 + "m" : ""}` : `${d.total}m`}`
+          : `${d.date}\nNo activity`;
+        const dayContent = (
+          <>
+            <title>{dayTitle}</title>
+            {/* Invisible hit area covering the whole column so the click zone
+                extends even when segments are tiny. */}
+            <rect x={x(i) - barW / 2} y={padY}
+                  width={barW} height={innerH}
+                  fill="transparent" style={d.href ? { cursor: "pointer" } : undefined} />
             {segments.length === 0 ? (
               <circle cx={x(i)} cy={H - padBottom - 2} r="2" fill="var(--line)" />
             ) : segments.map((s, j) => {
               const isTop = j === segments.length - 1;
-              // Round top corners only on the top-most segment for a nice pill.
               const rx = isTop ? 3 : 0;
               return (
                 <rect key={s.kind}
                       x={x(i) - barW / 2} y={s.top}
                       width={barW} height={Math.max(2, s.h)}
                       rx={rx}
-                      fill={KIND_COLOR[s.kind]}>
-                  <title>{`${KIND_LABEL[s.kind]}: ${s.mins}m`}</title>
-                </rect>
+                      fill={KIND_COLOR[s.kind]} />
               );
             })}
             {d.total > 0 && (
@@ -662,7 +690,12 @@ function ActivityMixChart({ byDay }) {
             <text x={x(i)} y={H - 6} textAnchor="middle" fontSize="10" fill="var(--muted)">
               {new Date(d.date).toLocaleDateString(undefined, { weekday: "short" })}
             </text>
-          </g>
+          </>
+        );
+        return d.href ? (
+          <a key={d.date} href={d.href}>{dayContent}</a>
+        ) : (
+          <g key={d.date}>{dayContent}</g>
         );
       })}
     </svg>
