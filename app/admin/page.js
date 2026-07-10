@@ -35,6 +35,7 @@ export default async function AdminPage() {
     { data: stravaSub },
     { data: pendingCoaches },
     { data: activeCoaches },
+    { data: waitlist, count: waitlistCount },
   ] = await Promise.all([
     admin.from("profiles").select("id, email, name, preset, strava_athlete_id, created_at", { count: "exact" }),
     admin.from("check_ins").select("user_id").gte("date", sevenDaysAgo),
@@ -52,6 +53,10 @@ export default async function AdminPage() {
       .select("id, email, name, coach_code")
       .eq("role", "coach").eq("coach_approved", true)
       .order("name"),
+    admin.from("waitlist")
+      .select("email, name, interests, source, created_at", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .limit(20),
   ]);
 
   // Aggregate
@@ -92,7 +97,7 @@ export default async function AdminPage() {
         <Stat label="Total users"        v={totalUsers ?? 0} />
         <Stat label="Active (7d)"        v={activeIds.size} />
         <Stat label="New signups (7d)"   v={signups7} sub={`${signups30} in 30d`} />
-        <Stat label="Strava connected"   v={stravaConnected ?? 0} />
+        <Stat label="Waitlist"           v={waitlistCount ?? 0} />
       </section>
 
       {/* Coach approval queue */}
@@ -197,6 +202,73 @@ export default async function AdminPage() {
               ))}
             </tbody>
           </table>
+        )}
+      </section>
+
+      {/* Waitlist */}
+      <section className="card mb-6">
+        <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+          <h2 className="text-lg font-bold">
+            Waitlist
+            {waitlistCount > 0 && (
+              <span className="ml-2 text-xs px-2 py-0.5 rounded"
+                    style={{ background: "var(--accent)", color: "#1a2a30" }}>
+                {waitlistCount} signup{waitlistCount === 1 ? "" : "s"}
+              </span>
+            )}
+          </h2>
+          <a href="/api/waitlist/export"
+             className="btn-ghost text-sm inline-flex items-center gap-1.5">
+            Download CSV
+          </a>
+        </div>
+        <p className="text-sm text-[var(--muted)] mb-3">
+          Signups from <a href="/waitlist" className="text-[var(--accent)] font-semibold">/waitlist</a>.
+          Source column captures the <code className="text-[var(--accent2,#fccabb)]">?src=</code> or
+          <code className="text-[var(--accent2,#fccabb)]"> ?utm_source=</code> URL param so you can
+          tell which IG post drove each signup.
+        </p>
+        {(!waitlist || waitlist.length === 0) ? (
+          <p className="text-sm text-[var(--muted)]">No signups yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[var(--muted)] text-xs uppercase tracking-wide">
+                  <th className="text-left p-2">Email</th>
+                  <th className="text-left p-2">Name</th>
+                  <th className="text-left p-2">Source</th>
+                  <th className="text-left p-2">Interests</th>
+                  <th className="text-left p-2">When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {waitlist.map((w) => (
+                  <tr key={w.email} className="border-t border-[var(--line)]">
+                    <td className="p-2">{w.email}</td>
+                    <td className="p-2">{w.name || "—"}</td>
+                    <td className="p-2">
+                      {w.source
+                        ? <span className="text-xs px-2 py-0.5 rounded"
+                                style={{ background: "rgba(248,182,166,.15)", color: "var(--accent2,#fccabb)" }}>
+                            {w.source}
+                          </span>
+                        : <span className="text-[var(--muted)]">—</span>}
+                    </td>
+                    <td className="p-2 text-[var(--muted)] max-w-xs truncate">{w.interests || "—"}</td>
+                    <td className="p-2 text-[var(--muted)] whitespace-nowrap">
+                      {new Date(w.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {waitlistCount > 20 && (
+              <p className="text-xs text-[var(--muted)] mt-3">
+                Showing 20 most recent of {waitlistCount}. Use Download CSV for the full list.
+              </p>
+            )}
+          </div>
         )}
       </section>
 
