@@ -275,11 +275,12 @@ export default function SessionCard({ userId, weekIndex, dayIndex, sessionIdx, s
             {aiBusy ? "Loading…" : aiWorkout ? "Show workout" : "Show workout"}
           </button>
         )}
-        {/* Only show View Ride for actual ride sessions */}
-        {linkedRideId && effectiveType === "ride" && (
+        {/* Show View activity for any linked activity — button label reflects
+            the actual session type so a strength card shows "View strength". */}
+        {linkedRideId && (
           <a href={`/rides/${linkedRideId}`} className="btn-ghost text-xs"
              style={{ padding: "5px 10px" }}>
-            View ride →
+            View {effectiveType === "ride" ? "ride" : effectiveType} →
           </a>
         )}
       </div>

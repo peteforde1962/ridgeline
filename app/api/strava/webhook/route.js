@@ -4,6 +4,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { ensureFreshToken, activityToRide, fetchActivityStreams, STRAVA_API_BASE } from "@/lib/strava";
 import { detectTrailsForActivity } from "@/lib/trail-detection";
 import { buildPlan, rideToPlanIndex } from "@/lib/plan";
+import { sessionTypeForActivityKind, recordedActivityLabel } from "@/lib/activity-mapping";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,10 +99,12 @@ export async function POST(request) {
         .in("id", detection.matches.map(m => m.trailId));
     }
 
-    // Auto-tick plan ride session for the ride's date.
+    // Auto-tick plan session for the activity's date, matched to its kind.
     let planTicked = 0;
     try {
       const plan = buildPlan(profile);
+      const targetType  = sessionTypeForActivityKind(row.activity_kind);
+      const targetLabel = recordedActivityLabel(row.activity_kind);
       const planIdx = rideToPlanIndex(profile.started_at, row.date, plan.length);
       if (planIdx) {
         const day = plan[planIdx.weekIndex].days[planIdx.dayIndex];
@@ -113,32 +116,31 @@ export async function POST(request) {
           .eq("week_index", planIdx.weekIndex)
           .eq("day_index", planIdx.dayIndex);
 
-        // Skip rows the user previously removed — the UI hides those, so
-        // updating one would mark complete invisibly.
-        const isRideRow = (s) => {
+        // Skip removed rows, match on the target session type.
+        const isMatchingRow = (s) => {
           if (s.tweak === "removed") return false;
-          if (s.swapped_to === "ride") return true;
-          if (s.is_extra) return s.swapped_to === "ride";
-          return day.details[s.session_idx]?.type === "ride";
+          const stype = s.swapped_to
+            || (s.is_extra ? null : day.details[s.session_idx]?.type);
+          return stype === targetType;
         };
 
-        const existingRideRow = (existingDay || []).find(isRideRow);
-        const templateRideIdx = day.details.findIndex((s) => s.type === "ride");
+        const existingMatch = (existingDay || []).find(isMatchingRow);
+        const templateMatchIdx = day.details.findIndex((s) => s.type === targetType);
 
-        if (existingRideRow) {
+        if (existingMatch) {
           await admin.from("plan_sessions")
             .update({ completed: true, ride_id: rideIns.id, tweak: "standard" })
             .eq("user_id", profile.id)
             .eq("week_index", planIdx.weekIndex)
             .eq("day_index", planIdx.dayIndex)
-            .eq("session_idx", existingRideRow.session_idx);
+            .eq("session_idx", existingMatch.session_idx);
           planTicked = 1;
-        } else if (templateRideIdx >= 0) {
+        } else if (templateMatchIdx >= 0) {
           await admin.from("plan_sessions").upsert({
             user_id: profile.id,
             week_index: planIdx.weekIndex,
             day_index:  planIdx.dayIndex,
-            session_idx: templateRideIdx,
+            session_idx: templateMatchIdx,
             completed: true, tweak: "standard",
             ride_id: rideIns.id,
           }, { onConflict: "user_id,week_index,day_index,session_idx" });
@@ -149,8 +151,8 @@ export async function POST(request) {
             week_index: planIdx.weekIndex,
             day_index:  planIdx.dayIndex,
             session_idx: 100,
-            is_extra: true, swapped_to: "ride",
-            custom_name: "Recorded ride",
+            is_extra: true, swapped_to: targetType,
+            custom_name: targetLabel,
             completed: true, tweak: "standard",
             ride_id: rideIns.id,
           }, { onConflict: "user_id,week_index,day_index,session_idx" });

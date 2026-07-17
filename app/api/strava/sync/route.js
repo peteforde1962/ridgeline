@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ensureFreshToken, fetchAthleteActivities, fetchActivityStreams, activityToRide, STRAVA_API_BASE } from "@/lib/strava";
 import { detectTrailsForActivity } from "@/lib/trail-detection";
 import { buildPlan, rideToPlanIndex } from "@/lib/plan";
+import { sessionTypeForActivityKind, recordedActivityLabel } from "@/lib/activity-mapping";
 
 export const maxDuration = 60;
 
@@ -140,11 +141,14 @@ export async function POST(request) {
         ...(detection.details || {}),
       });
 
-      // Auto-tick: find an existing ride-type session on this day (template OR
-      // swapped OR existing extra). If one exists, attach the ride to it and mark
-      // complete. Only if NONE exist do we add a new "Recorded ride" extra.
+      // Auto-tick: find an existing session on this day that MATCHES this
+      // activity's kind (ride→ride slot, strength→strength slot, etc.).
+      // If one exists, attach the activity to it and mark complete. Only if
+      // NONE match do we add a new "Recorded <kind>" extra of the right type.
       let tickAction = null;
       let tickError = null;
+      const targetType  = sessionTypeForActivityKind(row.activity_kind);
+      const targetLabel = recordedActivityLabel(row.activity_kind);
       const planIdx = rideToPlanIndex(profile.started_at, row.date, plan.length);
       if (planIdx) {
         const day = plan[planIdx.weekIndex].days[planIdx.dayIndex];
@@ -156,64 +160,59 @@ export async function POST(request) {
           .eq("week_index", planIdx.weekIndex)
           .eq("day_index", planIdx.dayIndex);
 
-        // Helper: is this session row currently a "ride"?
-        // IMPORTANT: skip rows the user previously removed — the UI hides those,
-        // so updating one would mark complete invisibly. We'd rather make a fresh
-        // row the user can see.
-        const isRideRow = (s) => {
+        // Helper: does this session row currently match the target type?
+        // Skip rows the user previously removed — UI hides them, so updating
+        // one would mark complete invisibly. We'd rather make a fresh row.
+        const isMatchingRow = (s) => {
           if (s.tweak === "removed") return false;
-          if (s.swapped_to === "ride") return true;
-          if (s.is_extra) return s.swapped_to === "ride";
-          return day.details[s.session_idx]?.type === "ride";
+          const stype = s.swapped_to
+            || (s.is_extra ? null : day.details[s.session_idx]?.type);
+          return stype === targetType;
         };
 
-        const existingRideRow = (existingDay || []).find(isRideRow);
-        const templateRideIdx = day.details.findIndex((s) => s.type === "ride");
+        const existingMatch = (existingDay || []).find(isMatchingRow);
+        const templateMatchIdx = day.details.findIndex((s) => s.type === targetType);
 
-        if (existingRideRow) {
-          // Update the existing row in place: link the ride + mark complete.
-          // Reset tweak to "standard" so a previously-skipped/removed row reappears.
+        if (existingMatch) {
           const { error: tickErr } = await supabase.from("plan_sessions")
             .update({ completed: true, ride_id: rideRow.id, tweak: "standard" })
             .eq("user_id", user.id)
             .eq("week_index", planIdx.weekIndex)
             .eq("day_index", planIdx.dayIndex)
-            .eq("session_idx", existingRideRow.session_idx);
+            .eq("session_idx", existingMatch.session_idx);
           tickError = tickErr?.message || null;
-          tickAction = `update existing session_idx=${existingRideRow.session_idx}`;
+          tickAction = `update existing ${targetType} session_idx=${existingMatch.session_idx}`;
           if (!tickErr) planTicked += 1;
-        } else if (templateRideIdx >= 0) {
-          // Template has a ride slot but no row yet — insert it.
+        } else if (templateMatchIdx >= 0) {
           const { error: tickErr } = await supabase.from("plan_sessions").upsert({
             user_id: user.id,
             week_index: planIdx.weekIndex,
             day_index:  planIdx.dayIndex,
-            session_idx: templateRideIdx,
+            session_idx: templateMatchIdx,
             completed: true, tweak: "standard",
             ride_id: rideRow.id,
           }, { onConflict: "user_id,week_index,day_index,session_idx" });
           tickError = tickErr?.message || null;
-          tickAction = `insert template session_idx=${templateRideIdx}`;
+          tickAction = `insert template ${targetType} session_idx=${templateMatchIdx}`;
           if (!tickErr) planTicked += 1;
         } else {
-          // No ride anywhere on this day — add the marker extra.
           const { error: tickErr } = await supabase.from("plan_sessions").upsert({
             user_id: user.id,
             week_index: planIdx.weekIndex,
             day_index:  planIdx.dayIndex,
             session_idx: 100,
-            is_extra: true, swapped_to: "ride",
-            custom_name: "Recorded ride",
+            is_extra: true, swapped_to: targetType,
+            custom_name: targetLabel,
             completed: true, tweak: "standard",
             ride_id: rideRow.id,
           }, { onConflict: "user_id,week_index,day_index,session_idx" });
           tickError = tickErr?.message || null;
-          tickAction = "insert extra session_idx=100";
+          tickAction = `insert extra ${targetType} session_idx=100`;
           if (!tickErr) planTicked += 1;
         }
       } else {
         tickAction = profile.started_at
-          ? `outside plan range (ride date ${row.date}, plan starts ${profile.started_at})`
+          ? `outside plan range (activity date ${row.date}, plan starts ${profile.started_at})`
           : "no profile.started_at — plan not set up";
       }
 

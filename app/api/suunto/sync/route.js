@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ensureFreshToken, fetchWorkouts, workoutToRide } from "@/lib/suunto";
 import { buildPlan, rideToPlanIndex } from "@/lib/plan";
+import { sessionTypeForActivityKind, recordedActivityLabel } from "@/lib/activity-mapping";
 
 export const maxDuration = 60;
 
@@ -46,7 +47,10 @@ export async function POST(request) {
       if (upErr) { debug.push({ workout: row.suunto_workout_key, error: upErr.message }); continue; }
       inserted++;
 
-      // Auto-tick plan ride session for this date (same logic as Strava).
+      // Auto-tick plan session for this date, matched to the activity's kind
+      // (strength Suunto workout ticks a strength slot, not a ride slot).
+      const targetType  = sessionTypeForActivityKind(row.activity_kind);
+      const targetLabel = recordedActivityLabel(row.activity_kind);
       const planIdx = rideToPlanIndex(profile.started_at, row.date, plan.length);
       if (planIdx) {
         const day = plan[planIdx.weekIndex].days[planIdx.dayIndex];
@@ -57,15 +61,16 @@ export async function POST(request) {
           .eq("week_index", planIdx.weekIndex)
           .eq("day_index", planIdx.dayIndex);
 
-        // Skip rows the user previously removed — the UI hides those.
-        const isRideRow = (s) => {
+        // Skip removed rows, match on the target session type.
+        const isMatchingRow = (s) => {
           if (s.tweak === "removed") return false;
-          return s.swapped_to === "ride" ||
-            (s.is_extra ? s.swapped_to === "ride" : day.details[s.session_idx]?.type === "ride");
+          const stype = s.swapped_to
+            || (s.is_extra ? null : day.details[s.session_idx]?.type);
+          return stype === targetType;
         };
 
-        const existing = (existingDay || []).find(isRideRow);
-        const templateRideIdx = day.details.findIndex((s) => s.type === "ride");
+        const existing = (existingDay || []).find(isMatchingRow);
+        const templateMatchIdx = day.details.findIndex((s) => s.type === targetType);
 
         if (existing) {
           await supabase.from("plan_sessions")
@@ -73,11 +78,11 @@ export async function POST(request) {
             .eq("user_id", user.id).eq("week_index", planIdx.weekIndex)
             .eq("day_index", planIdx.dayIndex).eq("session_idx", existing.session_idx);
           ticked++;
-        } else if (templateRideIdx >= 0) {
+        } else if (templateMatchIdx >= 0) {
           await supabase.from("plan_sessions").upsert({
             user_id: user.id,
             week_index: planIdx.weekIndex, day_index: planIdx.dayIndex,
-            session_idx: templateRideIdx,
+            session_idx: templateMatchIdx,
             completed: true, tweak: "standard", ride_id: rideRow.id,
           }, { onConflict: "user_id,week_index,day_index,session_idx" });
           ticked++;
@@ -86,8 +91,8 @@ export async function POST(request) {
             user_id: user.id,
             week_index: planIdx.weekIndex, day_index: planIdx.dayIndex,
             session_idx: 100,
-            is_extra: true, swapped_to: "ride",
-            custom_name: "Recorded ride", completed: true, tweak: "standard",
+            is_extra: true, swapped_to: targetType,
+            custom_name: targetLabel, completed: true, tweak: "standard",
             ride_id: rideRow.id,
           }, { onConflict: "user_id,week_index,day_index,session_idx" });
           ticked++;
