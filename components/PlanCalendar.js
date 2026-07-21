@@ -42,6 +42,7 @@ export default function PlanCalendar({
   sessionsByDay,
   extrasByDay,
   notesByDay,
+  ridesByDate,       // NEW: { "YYYY-MM-DD": [{ minutes, activity_kind }, ...] }
   todayYMD,
 }) {
   // Default to the month containing today (or today's local month if no plan).
@@ -156,11 +157,24 @@ export default function PlanCalendar({
                 color: "inherit",
               }}
             >
-              <div className="flex items-baseline justify-between mb-1">
+              <div className="flex items-baseline justify-between mb-1 gap-1">
                 <span className={`text-xs font-semibold ${isToday ? "text-[var(--accent)]" : ""}`}>
                   {date.getDate()}
                 </span>
-                {hasNote && <span className="text-[10px] text-[var(--accent2,#fccabb)]">✎</span>}
+                <div className="flex items-center gap-1">
+                  {ridesByDate?.[dateStr]?.length > 0 && (
+                    <span
+                      title={`${ridesByDate[dateStr].length} activit${ridesByDate[dateStr].length === 1 ? "y" : "ies"} recorded`}
+                      style={{
+                        display: "inline-block",
+                        width: 6, height: 6, borderRadius: "50%",
+                        background: "var(--accent)",
+                        boxShadow: "0 0 4px rgba(242,104,56,.6)",
+                      }}
+                    />
+                  )}
+                  {hasNote && <span className="text-[10px] text-[var(--accent2,#fccabb)]">✎</span>}
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-0.5">
@@ -193,7 +207,7 @@ export default function PlanCalendar({
       </div>
 
       <p className="text-[10px] text-[var(--muted)] mt-3">
-        Click a day to view details. Pills: ✓ done, + extra, strikethrough = skipped.
+        Click a plan day to view details. Pills: ✓ done, + extra, strikethrough = skipped. Peach dot = synced activity that day.
       </p>
     </div>
   );

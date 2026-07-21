@@ -5,7 +5,7 @@ export const revalidate = 0;
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildPlan, currentWeekIndex, todayDayIndex, todayDateInTz } from "@/lib/plan";
+import { buildPlan, currentWeekIndex, todayDayIndex, todayDateInTz, planStatus } from "@/lib/plan";
 import { recoveryRecommendation } from "@/lib/recovery";
 import { trainingLoadSeries, currentLoad, formInterpretation } from "@/lib/training-load";
 import SignOutButton from "@/components/SignOutButton";
@@ -48,6 +48,7 @@ export default async function DashboardPage() {
     (profile.name === user.email?.split("@")[0] && profile.preset === "Sport" && profile.weekly_hours === 6);
 
   const plan = buildPlan(profile);
+  const status = planStatus(profile, plan);
   const wIdx = currentWeekIndex(profile?.started_at, plan.length);
   const dIdx = todayDayIndex(profile?.timezone);
   const week = plan[wIdx];
@@ -164,13 +165,23 @@ export default async function DashboardPage() {
           <div>
             <h1 className="text-3xl font-extrabold mb-1">Hey, {displayName}</h1>
             <p className="text-[var(--muted)]">
-              Week {week?.week ?? "—"} of {plan.length} · {week?.phaseName ?? "—"} phase ·
-              {todayIsRest ? " rest day"
-                : ` today: ${todaySessions.map(s => s.name.split("(")[0].trim()).join(", ")}`}
+              {status === "active" ? (
+                <>
+                  Week {week?.week ?? "—"} of {plan.length} · {week?.phaseName ?? "—"} phase ·
+                  {todayIsRest ? " rest day"
+                    : ` today: ${todaySessions.map(s => s.name.split("(")[0].trim()).join(", ")}`}
+                </>
+              ) : status === "complete" ? (
+                <>Plan complete 🏁 — <a href="/profile" className="text-[var(--accent)] font-semibold">start a new one →</a></>
+              ) : (
+                <>No active plan — <a href="/profile" className="text-[var(--accent)] font-semibold">set one up →</a></>
+              )}
             </p>
           </div>
+          {/* Header CTAs are always visible, regardless of plan state — you
+              can still log a check-in and ask Coach even between plans. */}
           <div className="flex gap-2 flex-wrap">
-            <a href="/today" className="btn-primary text-sm"><Icon name="target" size={16} stroke="#1a2a30" /> Today's workout</a>
+            <a href="/today" className="btn-primary text-sm"><Icon name="target" size={16} stroke="#1a2a30" /> Today</a>
             <a href="/checkin" className="btn-ghost text-sm"><Icon name="heart" size={16} /> Check-in</a>
             <a href="/coach" className="btn-ghost text-sm"><Icon name="bolt" size={16} /> Coach AI</a>
           </div>

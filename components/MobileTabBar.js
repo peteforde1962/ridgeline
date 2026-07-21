@@ -19,6 +19,7 @@ const TABS = [
 // Items shown in the "More" sheet.
 const SHEET = [
   { href: "/dashboard",     label: "Dashboard",    icon: "home" },
+  { href: "/calendar",      label: "Calendar",     icon: "calendar" },
   { href: "/trails",        label: "Activities",   icon: "bike" },
   { href: "/training-load", label: "Training load", icon: "chart" },
   { href: "/skills",        label: "Skills",       icon: "bars" },

@@ -1,5 +1,5 @@
 // /plan — full N-week plan grid with swap-aware tags, extras, and note indicators.
-// ?view=calendar swaps the week list for a month-grid calendar.
+// Calendar (month-grid) view now lives at its own route: /calendar.
 
 export const dynamic = "force-dynamic";
 
@@ -7,26 +7,28 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildPlan, currentWeekIndex, sessionLabel, sessionTagClass, PHASES,
-  dateForDay, formatShortDate, todayDateInTz,
+  dateForDay, formatShortDate, planStatus,
 } from "@/lib/plan";
 import PlanDayCell from "@/components/PlanDayCell";
 import PageHeader from "@/components/PageHeader";
 import BackfillPlanButton from "@/components/BackfillPlanButton";
-import PlanCalendar from "@/components/PlanCalendar";
 
 export default async function PlanPage({ searchParams }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const view = searchParams?.view === "calendar" ? "calendar" : "weeks";
   // Phase filter — clicking a phase tile narrows the weeks shown.
   const phaseFilter = typeof searchParams?.phase === "string" ? searchParams.phase : null;
 
   const { data: profile } = await supabase
     .from("profiles").select("*").eq("id", user.id).single();
 
-  // No active plan — show the CTA and bail before we try to build/render anything.
-  if (!profile?.started_at) {
+  // Compute plan lifecycle status early so we can render the right shell.
+  const _plan = buildPlan(profile);
+  const status = planStatus(profile, _plan);
+
+  // No active plan yet — show the setup CTA.
+  if (status === "none") {
     return (
       <main className="min-h-screen p-6 max-w-3xl mx-auto">
         <PageHeader />
@@ -40,6 +42,30 @@ export default async function PlanPage({ searchParams }) {
             Set up your training plan to get a periodized schedule built around your goals, weekly hours, and race date.
           </p>
           <a href="/profile" className="btn-primary inline-flex">Set up plan →</a>
+        </div>
+      </main>
+    );
+  }
+
+  // Plan finished — show a completion card + next-plan CTA rather than
+  // silently keeping the last week visible past its end date.
+  if (status === "complete") {
+    return (
+      <main className="min-h-screen p-6 max-w-3xl mx-auto">
+        <PageHeader />
+        <h1 className="text-3xl font-extrabold mb-1">Training plan</h1>
+        <p className="text-[var(--muted)] mb-6">
+          Your {_plan.length}-week plan is complete. Nice work.
+        </p>
+        <div className="card text-center" style={{ padding: 32 }}>
+          <h2 className="text-xl font-bold mb-2">Plan complete 🏁</h2>
+          <p className="text-[var(--muted)] mb-5">
+            You wrapped the last week. Reset and generate a fresh plan around your next goal, or take a recovery block and start again when you're ready.
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <a href="/profile" className="btn-primary">Start a new plan →</a>
+            <a href="/calendar" className="btn-ghost">View calendar</a>
+          </div>
         </div>
       </main>
     );
@@ -72,7 +98,8 @@ export default async function PlanPage({ searchParams }) {
   }
   const notesByDay = new Set((allNotes || []).map((n) => `${n.week_index}-${n.day_index}`));
 
-  const plan = buildPlan(profile);
+  // Reuse the plan we built for status detection above.
+  const plan = _plan;
   const wIdx = currentWeekIndex(profile?.started_at, plan.length);
 
   const phaseSummary = PHASES.map((p) => ({
@@ -97,60 +124,30 @@ export default async function PlanPage({ searchParams }) {
     return { scheduled, done, pct: scheduled ? Math.round(100 * done / scheduled) : 0 };
   }
 
-  const todayYMD = todayDateInTz(profile?.timezone);
 
   return (
     <main className="min-h-screen p-6 max-w-6xl mx-auto">
       <PageHeader />
       <div className="flex items-baseline justify-between flex-wrap gap-3 mb-1">
         <h1 className="text-3xl font-extrabold">{plan.length}-Week Plan</h1>
-        <div className="inline-flex rounded-lg overflow-hidden"
-             style={{ border: "1px solid var(--line)" }}>
-          <a href="/plan?view=weeks"
-             className={`text-xs font-semibold px-3 py-1.5 ${view === "weeks" ? "" : "text-[var(--muted)]"}`}
-             style={{ background: view === "weeks" ? "var(--accent)" : "transparent",
-                      color: view === "weeks" ? "#1a2a30" : undefined }}>
-            Weeks
-          </a>
-          <a href="/plan?view=calendar"
-             className={`text-xs font-semibold px-3 py-1.5 ${view === "calendar" ? "" : "text-[var(--muted)]"}`}
-             style={{ background: view === "calendar" ? "var(--accent)" : "transparent",
-                      color: view === "calendar" ? "#1a2a30" : undefined }}>
-            Calendar
-          </a>
-        </div>
+        <a href="/calendar" className="text-sm text-[var(--accent)] font-semibold">
+          Calendar view →
+        </a>
       </div>
       <p className="text-[var(--muted)] mb-3">
-        {view === "calendar"
-          ? "Month view of your plan. Click any day to view details."
-          : <>Tap a session tag to cycle: <span className="text-[var(--text)]">○ pending → ✓ done → ✗ skipped</span>. Click a day to add workouts, notes, or change details. ✎ = day has notes.</>}
+        Tap a session tag to cycle: <span className="text-[var(--text)]">○ pending → ✓ done → ✗ skipped</span>. Click a day to add workouts, notes, or change details. ✎ = day has notes.
       </p>
 
       <div className="mb-5">
         <BackfillPlanButton />
       </div>
 
-      {view === "calendar" && (
-        <PlanCalendar
-          plan={plan}
-          startedAt={profile?.started_at}
-          sessionsByDay={sessionsByDay}
-          extrasByDay={extrasByDay}
-          notesByDay={notesByDay}
-          todayYMD={todayYMD}
-        />
-      )}
-
-      {view === "weeks" && (
-        <>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
         {phaseSummary.map((p) => {
           const isCurrent  = plan[wIdx]?.phase === p.key;
           const isSelected = phaseFilter === p.key;
           // Toggle: click again to clear the filter.
-          const targetHref = isSelected
-            ? `/plan?view=${view}`
-            : `/plan?view=${view}&phase=${p.key}`;
+          const targetHref = isSelected ? `/plan` : `/plan?phase=${p.key}`;
           return (
             <a
               key={p.key}
@@ -188,7 +185,7 @@ export default async function PlanPage({ searchParams }) {
       {phaseFilter && (
         <p className="text-xs text-[var(--muted)] mb-4">
           Filtered to <strong className="text-[var(--text)]">{phaseSummary.find(p => p.key === phaseFilter)?.name || phaseFilter}</strong> phase.
-          {" "}<a href={`/plan?view=${view}`} className="text-[var(--accent)] font-semibold">Clear filter</a>
+          {" "}<a href="/plan" className="text-[var(--accent)] font-semibold">Clear filter</a>
         </p>
       )}
 
@@ -271,8 +268,6 @@ export default async function PlanPage({ searchParams }) {
           );
         })}
       </div>
-        </>
-      )}
     </main>
   );
 }

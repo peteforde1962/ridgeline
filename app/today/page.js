@@ -4,9 +4,11 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildPlan, currentWeekIndex, todayDayIndex, todayDateInTz, readinessFromCheckin, sessionLabel } from "@/lib/plan";
+import { buildPlan, currentWeekIndex, todayDayIndex, todayDateInTz, readinessFromCheckin, sessionLabel, planStatus } from "@/lib/plan";
+import { recordedActivityLabel } from "@/lib/activity-mapping";
 import SessionCard from "@/components/SessionCard";
 import LogoMark from "@/components/LogoMark";
+import Icon from "@/lib/icons";
 
 export default async function TodayPage() {
   const supabase = createClient();
@@ -27,10 +29,13 @@ export default async function TodayPage() {
   ]);
 
   const plan = buildPlan(profile);
+  const status = planStatus(profile, plan);
   const wIdx = currentWeekIndex(profile?.started_at, plan.length);
   const dIdx = todayDayIndex(profile?.timezone);
+  // When status is "complete" or "none", these clamp to safe indices but we
+  // won't render plan sessions from them below.
   const week = plan[wIdx];
-  const day = week.days[dIdx];
+  const day  = week?.days?.[dIdx];
 
   // Pull persisted state for today's sessions (including ride_id + ai_workout).
   const { data: storedSessions } = await supabase
@@ -65,7 +70,13 @@ export default async function TodayPage() {
 
       <h1 className="text-3xl font-extrabold mb-1">Today</h1>
       <p className="text-[var(--muted)] mb-5">
-        Week {week.week} · {day.day} · {week.phaseName} phase
+        {status === "active" ? (
+          <>Week {week.week} · {day.day} · {week.phaseName} phase</>
+        ) : status === "complete" ? (
+          <>Plan complete — free training. <a href="/profile" className="text-[var(--accent)] font-semibold">Start a new plan →</a></>
+        ) : (
+          <>No active plan. <a href="/profile" className="text-[var(--accent)] font-semibold">Set one up →</a></>
+        )}
       </p>
 
       {readiness ? (
@@ -91,35 +102,39 @@ export default async function TodayPage() {
         </div>
       )}
 
-      {day.details.length === 0 ? (
-        <div className="card text-center">
-          <p>Rest day. Hydrate, sleep, foam-roll.</p>
-        </div>
-      ) : (
-        day.details.map((session, i) => {
-          const stored = (annotatedSessions || []).find(
-            (s) => !s.is_extra && s.session_idx === i
-          );
-          return (
-            <SessionCard
-              key={`t-${i}`}
-              userId={user.id}
-              weekIndex={wIdx}
-              dayIndex={dIdx}
-              sessionIdx={i}
-              session={session}
-              stored={stored}
-            />
-          );
-        })
+      {/* Template plan sessions — only render when the plan is actively running.
+          On "complete" or "none", these are meaningless so we skip them. */}
+      {status === "active" && (
+        day.details.length === 0 ? (
+          <div className="card text-center mb-3">
+            <p>Rest day. Hydrate, sleep, foam-roll.</p>
+          </div>
+        ) : (
+          day.details.map((session, i) => {
+            const stored = (annotatedSessions || []).find(
+              (s) => !s.is_extra && s.session_idx === i
+            );
+            return (
+              <SessionCard
+                key={`t-${i}`}
+                userId={user.id}
+                weekIndex={wIdx}
+                dayIndex={dIdx}
+                sessionIdx={i}
+                session={session}
+                stored={stored}
+              />
+            );
+          })
+        )
       )}
 
-      {/* User-added extras + auto-imported "Recorded ride" markers */}
-      {(annotatedSessions || []).filter((s) => s.is_extra).map((e) => {
+      {/* User-added extras + auto-imported "Recorded X" markers — always shown. */}
+      {status === "active" && (annotatedSessions || []).filter((s) => s.is_extra).map((e) => {
         const synthSession = {
           type:  e.swapped_to || "ride",
           name:  e.custom_name || `Extra ${sessionLabel(e.swapped_to || "ride")}`,
-          notes: e.custom_notes || (e.ride_id ? "Recorded ride — click View ride for details" : "User-added workout"),
+          notes: e.custom_notes || (e.ride_id ? "Recorded activity — click View for details" : "User-added workout"),
         };
         return (
           <SessionCard
@@ -133,6 +148,59 @@ export default async function TodayPage() {
           />
         );
       })}
+
+      {/* Today's synced activities. Two rules:
+          - In "complete" / "none" state: show every ride we imported today so
+            the user still sees their activity.
+          - In "active" state: only show rides that AREN'T already linked to a
+            plan session (safety net for when sync hasn't auto-ticked yet). */}
+      {(() => {
+        const linkedIds = new Set(
+          (annotatedSessions || []).map((s) => s.ride_id).filter(Boolean)
+        );
+        const ridesToShow = (dayRides || []).filter(
+          (r) => status !== "active" || !linkedIds.has(r.id)
+        );
+        if (ridesToShow.length === 0) return null;
+        return (
+          <>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--muted)] mt-4 mb-2">
+              Today's activities
+            </h2>
+            {ridesToShow.map((r) => (
+              <div key={r.id} className="card mb-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold">
+                      {r.notes?.split(" · ")[0] || recordedActivityLabel("cycle")}
+                    </div>
+                    <div className="text-sm text-[var(--muted)]">
+                      {r.minutes} min · {r.km} km · {r.elev_m || 0} m climb · from {r.source}
+                    </div>
+                  </div>
+                  <a href={`/rides/${r.id}`} className="btn-ghost text-xs"
+                     style={{ padding: "5px 10px" }}>
+                    View activity →
+                  </a>
+                </div>
+              </div>
+            ))}
+          </>
+        );
+      })()}
+
+      {/* No plan + no activity today — soft nudge to check in or start a plan. */}
+      {status === "none" && (dayRides || []).length === 0 && (
+        <div className="card text-center mt-4" style={{ padding: 28 }}>
+          <p className="mb-3">No workouts scheduled and no activity synced today.</p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <a href="/profile" className="btn-primary text-sm">Set up a plan →</a>
+            <a href="/coach" className="btn-ghost text-sm inline-flex items-center gap-1">
+              <Icon name="bolt" size={13} /> Ask Coach AI
+            </a>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
