@@ -9,6 +9,16 @@
 
 import { useMemo, useState } from "react";
 import { sessionLabel, sessionTagClass, rideToPlanIndex } from "@/lib/plan";
+import { sportInfo } from "@/lib/activity";
+
+// Map an activity kind to a plan session type so we can reuse sessionTagClass
+// for consistent tag colors across the app. Keeps MTB/E-MTB visually grouped
+// with rides, Strength with strength, etc.
+const KIND_TO_PLAN_TYPE = {
+  cycle: "ride", run: "run", strength: "strength", yoga: "yoga",
+  rope: "rope", hike: "run", swim: "rest", ski: "rest",
+  paddle: "rest", climb: "rest", other: "rest",
+};
 
 const MONTH_LABELS = [
   "January", "February", "March", "April", "May", "June",
@@ -162,23 +172,11 @@ export default function PlanCalendar({
                 <span className={`text-xs font-semibold ${isToday ? "text-[var(--accent)]" : ""}`}>
                   {date.getDate()}
                 </span>
-                <div className="flex items-center gap-1">
-                  {ridesByDate?.[dateStr]?.length > 0 && (
-                    <span
-                      title={`${ridesByDate[dateStr].length} activit${ridesByDate[dateStr].length === 1 ? "y" : "ies"} recorded`}
-                      style={{
-                        display: "inline-block",
-                        width: 6, height: 6, borderRadius: "50%",
-                        background: "var(--accent)",
-                        boxShadow: "0 0 4px rgba(242,104,56,.6)",
-                      }}
-                    />
-                  )}
-                  {hasNote && <span className="text-[10px] text-[var(--accent2,#fccabb)]">✎</span>}
-                </div>
+                {hasNote && <span className="text-[10px] text-[var(--accent2,#fccabb)]">✎</span>}
               </div>
 
               <div className="flex flex-wrap gap-0.5">
+                {/* Plan pills (template + extras) */}
                 {visible.map((p, j) => (
                   <span
                     key={j}
@@ -201,9 +199,25 @@ export default function PlanCalendar({
                 {pills.length === 0 && inPlan && (
                   <span className="text-[9px] text-[var(--muted)] italic">Rest</span>
                 )}
-                {pills.length === 0 && !inPlan && ridesByDate?.[dateStr]?.length > 0 && (
-                  <span className="text-[9px] text-[var(--muted)] italic">Activity</span>
-                )}
+
+                {/* Synced-activity pills — MTB, E-MTB, Strength, etc. using the
+                    real sport_type label from lib/activity.js. Only shown when
+                    the activity isn't already covered by a plan pill for this
+                    day (avoids double-labeling when auto-tick has run). */}
+                {(ridesByDate?.[dateStr] || []).map((r, idx) => {
+                  const info = sportInfo(r.sport_type);
+                  const type = KIND_TO_PLAN_TYPE[info.kind] || "rest";
+                  return (
+                    <span
+                      key={`r-${r.id || idx}`}
+                      className={`text-[9px] px-1.5 py-0.5 rounded ${sessionTagClass(type)}`}
+                      style={{ fontWeight: 700, opacity: 0.9 }}
+                      title={`${info.label} · ${r.minutes} min (synced)`}
+                    >
+                      • {info.label}
+                    </span>
+                  );
+                })}
               </div>
             </Cell>
           );
@@ -211,7 +225,7 @@ export default function PlanCalendar({
       </div>
 
       <p className="text-[10px] text-[var(--muted)] mt-3">
-        Click a plan day to view details. Pills: ✓ done, + extra, strikethrough = skipped. Peach dot = synced activity that day.
+        Click any day to view details. Plan pills: ✓ done, + extra, strikethrough = skipped. Pills starting with • are synced activities (MTB, Strength, E-MTB, etc.).
       </p>
     </div>
   );

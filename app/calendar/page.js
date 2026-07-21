@@ -37,7 +37,7 @@ export default async function CalendarPage() {
       .eq("user_id", user.id),
     supabase
       .from("rides")
-      .select("id, date, minutes, activity_kind")
+      .select("id, date, minutes, activity_kind, sport_type")
       .eq("user_id", user.id)
       .gte("date", ninetyDaysAgo)
       .order("date", { ascending: false }),
