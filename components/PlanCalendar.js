@@ -135,16 +135,17 @@ export default function PlanCalendar({
             ? "rgba(248,182,166,0.15)"
             : (inMonth ? "var(--panel)" : "transparent");
 
+          // Every day is clickable now — routes to the universal /day/[date]
+          // view so athletes can add workouts on ANY day, not just plan days.
           const inPlan = !!planIdx;
-          const href = inPlan ? `/plan/${planIdx.weekIndex}/${planIdx.dayIndex}` : undefined;
-
-          const Cell = inPlan ? "a" : "div";
+          const href   = `/day/${dateStr}`;
+          const Cell   = "a";
 
           return (
             <Cell
               key={i}
               href={href}
-              className={inPlan ? "transition-opacity hover:opacity-90 block" : "block"}
+              className="transition-opacity hover:opacity-90 block"
               style={{
                 background: cellBg,
                 border: isToday ? "1.5px solid var(--accent)" : "1px solid var(--line)",
@@ -152,7 +153,7 @@ export default function PlanCalendar({
                 padding: 6,
                 minHeight: 86,
                 opacity: inMonth ? 1 : 0.35,
-                cursor: inPlan ? "pointer" : "default",
+                cursor: "pointer",
                 textDecoration: "none",
                 color: "inherit",
               }}
@@ -199,6 +200,9 @@ export default function PlanCalendar({
                 )}
                 {pills.length === 0 && inPlan && (
                   <span className="text-[9px] text-[var(--muted)] italic">Rest</span>
+                )}
+                {pills.length === 0 && !inPlan && ridesByDate?.[dateStr]?.length > 0 && (
+                  <span className="text-[9px] text-[var(--muted)] italic">Activity</span>
                 )}
               </div>
             </Cell>
