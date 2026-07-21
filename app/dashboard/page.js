@@ -172,7 +172,11 @@ export default async function DashboardPage() {
                     : ` today: ${todaySessions.map(s => s.name.split("(")[0].trim()).join(", ")}`}
                 </>
               ) : status === "complete" ? (
-                <>Plan complete 🏁 — <a href="/profile" className="text-[var(--accent)] font-semibold">start a new one →</a></>
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon name="star" size={16} stroke="var(--accent)" />
+                  Plan complete —{" "}
+                  <a href="/profile" className="text-[var(--accent)] font-semibold">start a new one →</a>
+                </span>
               ) : (
                 <>No active plan — <a href="/profile" className="text-[var(--accent)] font-semibold">set one up →</a></>
               )}

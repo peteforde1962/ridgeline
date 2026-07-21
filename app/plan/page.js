@@ -12,6 +12,7 @@ import {
 import PlanDayCell from "@/components/PlanDayCell";
 import PageHeader from "@/components/PageHeader";
 import BackfillPlanButton from "@/components/BackfillPlanButton";
+import Icon from "@/lib/icons";
 
 export default async function PlanPage({ searchParams }) {
   const supabase = createClient();
@@ -58,7 +59,10 @@ export default async function PlanPage({ searchParams }) {
           Your {_plan.length}-week plan is complete. Nice work.
         </p>
         <div className="card text-center" style={{ padding: 32 }}>
-          <h2 className="text-xl font-bold mb-2">Plan complete 🏁</h2>
+          <h2 className="text-xl font-bold mb-2 inline-flex items-center gap-2 justify-center">
+            <Icon name="star" size={20} stroke="var(--accent)" />
+            Plan complete
+          </h2>
           <p className="text-[var(--muted)] mb-5">
             You wrapped the last week. Reset and generate a fresh plan around your next goal, or take a recovery block and start again when you're ready.
           </p>
