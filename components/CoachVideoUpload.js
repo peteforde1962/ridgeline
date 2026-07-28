@@ -35,7 +35,16 @@ export default function CoachVideoUpload({ studentId, studentName }) {
     const { error: upErr } = await supabase.storage.from("videos").upload(path, file, {
       contentType: file.type || "video/mp4", upsert: false,
     });
-    if (upErr) { setBusy(false); setError("Upload failed: " + upErr.message); return; }
+    if (upErr) {
+      setBusy(false);
+      // Storage RLS = policy issue on the bucket; usually the coach-upload
+      // storage policy hasn't been created or the student isn't linked.
+      const hint = /row-level security/i.test(upErr.message)
+        ? " (bucket policy — check the student is linked to you and the coach-prescribe SQL migration has been run)"
+        : "";
+      setError("Storage upload failed: " + upErr.message + hint);
+      return;
+    }
 
     const { error: insErr } = await supabase.from("videos").insert({
       user_id: studentId,
@@ -45,7 +54,13 @@ export default function CoachVideoUpload({ studentId, studentName }) {
       type,
     });
     setBusy(false);
-    if (insErr) { setError(insErr.message); return; }
+    if (insErr) {
+      const hint = /row-level security/i.test(insErr.message)
+        ? " (videos table policy — check the coach-prescribe SQL migration has been run)"
+        : "";
+      setError("Database insert failed: " + insErr.message + hint);
+      return;
+    }
 
     setDone(true);
     setFile(null); setName(""); setType("Form check");

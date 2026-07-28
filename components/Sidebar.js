@@ -62,6 +62,7 @@ const LIBRARIES = [
 ];
 
 const BOTTOM = [
+  { href: "/coach-chat", label: "Coach chat",  ico: ICONS.whistle, studentWithCoachOnly: true },
   { href: "/coaching",   label: "Coaching",    ico: ICONS.whistle, coachOnly: true },
   { href: "/profile",    label: "Profile",     ico: ICONS.cog },
   { href: "/admin",      label: "Admin",       ico: ICONS.bars, adminOnly: true },
@@ -73,8 +74,9 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCoach, setIsCoach] = useState(false);
+  const [hasCoach, setHasCoach] = useState(false);   // student is linked to a coach
 
-  // Detect admin + coach status to conditionally show the relevant links.
+  // Detect admin + coach status + coach-linkage to conditionally show links.
   useEffect(() => {
     (async () => {
       try {
@@ -82,9 +84,10 @@ export default function Sidebar() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const { data } = await supabase.from("profiles")
-          .select("is_admin, role, coach_approved").eq("id", user.id).single();
+          .select("is_admin, role, coach_approved, coach_id").eq("id", user.id).single();
         setIsAdmin(!!data?.is_admin);
         setIsCoach(data?.role === "coach" && !!data?.coach_approved);
+        setHasCoach(!!data?.coach_id);
       } catch {}
     })();
   }, [pathname]);
@@ -134,6 +137,7 @@ export default function Sidebar() {
         {BOTTOM
           .filter((it) => !it.adminOnly || isAdmin)
           .filter((it) => !it.coachOnly || isCoach)
+          .filter((it) => !it.studentWithCoachOnly || hasCoach)
           .map((item) => <Row key={item.href} item={item} />)}
       </div>
     </aside>

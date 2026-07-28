@@ -11,6 +11,7 @@ import { trainingLoadSeries, currentLoad, formInterpretation } from "@/lib/train
 import PageHeader from "@/components/PageHeader";
 import CoachPrescribeWorkout from "@/components/CoachPrescribeWorkout";
 import CoachVideoUpload from "@/components/CoachVideoUpload";
+import CoachStudentChat from "@/components/CoachStudentChat";
 import ActivityBadge from "@/components/ActivityBadge";
 
 export default async function StudentDetail({ params }) {
@@ -125,6 +126,16 @@ export default async function StudentDetail({ params }) {
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <CoachPrescribeWorkout studentId={student.id} studentName={studentName} />
         <CoachVideoUpload      studentId={student.id} studentName={studentName} />
+      </section>
+
+      {/* --- Direct chat with this student --- */}
+      <section className="mb-6">
+        <CoachStudentChat
+          coachId={user.id}
+          studentId={student.id}
+          currentUserId={user.id}
+          otherPartyName={studentName}
+        />
       </section>
 
       {/* --- Videos --- */}

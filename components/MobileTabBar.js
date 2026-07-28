@@ -31,6 +31,7 @@ const SHEET = [
   { href: "/run",           label: "Run",          icon: "run" },
   { href: "/rope",          label: "Flow rope",    icon: "rope" },
   { href: "/videos",        label: "Videos",       icon: "movie" },
+  { href: "/coach-chat",    label: "Coach chat",   icon: "whistle", studentWithCoachOnly: true },
   { href: "/coaching",      label: "Coaching",     icon: "whistle", coachOnly: true },
   { href: "/profile",       label: "Profile",      icon: "cog" },
   { href: "/admin",         label: "Admin",        icon: "bars", adminOnly: true },
@@ -43,11 +44,12 @@ export default function MobileTabBar() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCoach, setIsCoach] = useState(false);
+  const [hasCoach, setHasCoach] = useState(false);
 
   // Close sheet on route change.
   useEffect(() => { setSheetOpen(false); }, [pathname]);
 
-  // Detect admin / coach status so the sheet filters correctly.
+  // Detect admin / coach / linked-to-coach status so the sheet filters correctly.
   useEffect(() => {
     (async () => {
       try {
@@ -55,9 +57,10 @@ export default function MobileTabBar() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const { data } = await supabase.from("profiles")
-          .select("is_admin, role, coach_approved").eq("id", user.id).single();
+          .select("is_admin, role, coach_approved, coach_id").eq("id", user.id).single();
         setIsAdmin(!!data?.is_admin);
         setIsCoach(data?.role === "coach" && !!data?.coach_approved);
+        setHasCoach(!!data?.coach_id);
       } catch {}
     })();
   }, [pathname]);
@@ -71,7 +74,8 @@ export default function MobileTabBar() {
 
   const filteredSheet = SHEET
     .filter((it) => !it.adminOnly || isAdmin)
-    .filter((it) => !it.coachOnly || isCoach);
+    .filter((it) => !it.coachOnly || isCoach)
+    .filter((it) => !it.studentWithCoachOnly || hasCoach);
 
   return (
     <>
