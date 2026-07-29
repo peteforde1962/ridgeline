@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import LogoMark from "./LogoMark";
+import UnreadBadge from "./UnreadBadge";
 
 // Tiny SVG icon components. Stroke-only, flat, 1.75 stroke-width.
 function Icon({ path, viewBox = "0 0 24 24" }) {
@@ -75,6 +76,7 @@ export default function Sidebar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCoach, setIsCoach] = useState(false);
   const [hasCoach, setHasCoach] = useState(false);   // student is linked to a coach
+  const [unreadChat, setUnreadChat] = useState(0);   // unread chat messages TO me
 
   // Detect admin + coach status + coach-linkage to conditionally show links.
   useEffect(() => {
@@ -88,6 +90,15 @@ export default function Sidebar() {
         setIsAdmin(!!data?.is_admin);
         setIsCoach(data?.role === "coach" && !!data?.coach_approved);
         setHasCoach(!!data?.coach_id);
+
+        // Count chat messages sent to me that I haven't read yet. RLS restricts
+        // this query to my own threads, so a simple sender_id != me check works.
+        const { count } = await supabase
+          .from("coach_messages")
+          .select("id", { count: "exact", head: true })
+          .neq("sender_id", user.id)
+          .is("read_by_recipient_at", null);
+        setUnreadChat(count || 0);
       } catch {}
     })();
   }, [pathname]);
@@ -96,7 +107,7 @@ export default function Sidebar() {
 
   const isActive = (href) => pathname === href || pathname?.startsWith(href + "/");
 
-  function Row({ item }) {
+  function Row({ item, badge }) {
     const active = isActive(item.href);
     return (
       <a
@@ -110,7 +121,8 @@ export default function Sidebar() {
         aria-current={active ? "page" : undefined}
       >
         <span className="opacity-80">{item.ico}</span>
-        <span>{item.label}</span>
+        <span className="flex-1">{item.label}</span>
+        {badge > 0 && <UnreadBadge count={badge} />}
       </a>
     );
   }
@@ -138,7 +150,12 @@ export default function Sidebar() {
           .filter((it) => !it.adminOnly || isAdmin)
           .filter((it) => !it.coachOnly || isCoach)
           .filter((it) => !it.studentWithCoachOnly || hasCoach)
-          .map((item) => <Row key={item.href} item={item} />)}
+          .map((item) => {
+            // Badge the chat entries — /coach-chat for students, /coaching for coaches.
+            const badge = (item.href === "/coach-chat" || item.href === "/coaching")
+              ? unreadChat : 0;
+            return <Row key={item.href} item={item} badge={badge} />;
+          })}
       </div>
     </aside>
   );

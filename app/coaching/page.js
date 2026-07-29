@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
+import UnreadBadge from "@/components/UnreadBadge";
 
 export default async function CoachingHome() {
   const supabase = createClient();
@@ -21,6 +22,21 @@ export default async function CoachingHome() {
     .select("id, name, email, level, goal, race_date")
     .eq("coach_id", user.id)
     .order("name");
+
+  // Unread chat messages from each student — group so we can badge per card.
+  const studentIds = (students || []).map((s) => s.id);
+  const { data: unreadRows } = studentIds.length > 0
+    ? await supabase
+        .from("coach_messages")
+        .select("sender_id")
+        .eq("coach_id", user.id)
+        .in("sender_id", studentIds)
+        .is("read_by_recipient_at", null)
+    : { data: [] };
+  const unreadByStudent = {};
+  (unreadRows || []).forEach((m) => {
+    unreadByStudent[m.sender_id] = (unreadByStudent[m.sender_id] || 0) + 1;
+  });
 
   return (
     <main className="min-h-screen p-6 max-w-5xl mx-auto">
@@ -42,15 +58,27 @@ export default async function CoachingHome() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {students.map((s) => (
-            <a key={s.id} href={`/coaching/students/${s.id}`}
-               className="card hover:opacity-90 transition-opacity">
-              <div className="font-bold">{s.name || s.email}</div>
-              <div className="text-xs text-[var(--muted)] mt-0.5">
-                {s.level || "—"} · {s.goal || "—"}{s.race_date ? ` · race ${s.race_date}` : ""}
-              </div>
-            </a>
-          ))}
+          {students.map((s) => {
+            const unread = unreadByStudent[s.id] || 0;
+            return (
+              <a key={s.id} href={`/coaching/students/${s.id}`}
+                 className="card hover:opacity-90 transition-opacity relative">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold">{s.name || s.email}</div>
+                    <div className="text-xs text-[var(--muted)] mt-0.5">
+                      {s.level || "—"} · {s.goal || "—"}{s.race_date ? ` · race ${s.race_date}` : ""}
+                    </div>
+                  </div>
+                  {unread > 0 && (
+                    <div className="flex-shrink-0" title={`${unread} unread message${unread === 1 ? "" : "s"}`}>
+                      <UnreadBadge count={unread} size="md" />
+                    </div>
+                  )}
+                </div>
+              </a>
+            );
+          })}
         </div>
       )}
     </main>

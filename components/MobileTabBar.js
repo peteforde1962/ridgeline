@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Icon from "@/lib/icons";
+import UnreadBadge from "./UnreadBadge";
 
 const TABS = [
   { href: "/today",    label: "Today",    icon: "target" },
@@ -45,11 +46,13 @@ export default function MobileTabBar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCoach, setIsCoach] = useState(false);
   const [hasCoach, setHasCoach] = useState(false);
+  const [unreadChat, setUnreadChat] = useState(0);
 
   // Close sheet on route change.
   useEffect(() => { setSheetOpen(false); }, [pathname]);
 
-  // Detect admin / coach / linked-to-coach status so the sheet filters correctly.
+  // Detect admin / coach / linked-to-coach status + unread chat so the sheet
+  // filters correctly and shows badges where relevant.
   useEffect(() => {
     (async () => {
       try {
@@ -61,6 +64,14 @@ export default function MobileTabBar() {
         setIsAdmin(!!data?.is_admin);
         setIsCoach(data?.role === "coach" && !!data?.coach_approved);
         setHasCoach(!!data?.coach_id);
+
+        // Count chat messages TO me that I haven't opened yet.
+        const { count } = await supabase
+          .from("coach_messages")
+          .select("id", { count: "exact", head: true })
+          .neq("sender_id", user.id)
+          .is("read_by_recipient_at", null);
+        setUnreadChat(count || 0);
       } catch {}
     })();
   }, [pathname]);
@@ -97,9 +108,17 @@ export default function MobileTabBar() {
           className={sheetActive ? "active tabbar-more" : "tabbar-more"}
           aria-expanded={sheetOpen}
           aria-label="More menu"
+          style={{ position: "relative" }}
         >
           <Icon name="more" size={22} />
           <span>More</span>
+          {/* Chat lives inside the sheet — surface unread count on the More
+              button so the user knows to open it. */}
+          {unreadChat > 0 && (
+            <span style={{ position: "absolute", top: 4, right: "calc(50% - 22px)" }}>
+              <UnreadBadge count={unreadChat} />
+            </span>
+          )}
         </button>
       </nav>
 
@@ -112,11 +131,19 @@ export default function MobileTabBar() {
             <div className="tabbar-sheet-grid">
               {filteredSheet.map((item) => {
                 const active = isActiveLink(item.href);
+                const badge = (item.href === "/coach-chat" || item.href === "/coaching")
+                  ? unreadChat : 0;
                 return (
                   <a key={item.href} href={item.href}
-                     className={active ? "tabbar-sheet-tile active" : "tabbar-sheet-tile"}>
+                     className={active ? "tabbar-sheet-tile active" : "tabbar-sheet-tile"}
+                     style={{ position: "relative" }}>
                     <Icon name={item.icon} size={22} />
                     <span>{item.label}</span>
+                    {badge > 0 && (
+                      <span style={{ position: "absolute", top: 6, right: 6 }}>
+                        <UnreadBadge count={badge} />
+                      </span>
+                    )}
                   </a>
                 );
               })}

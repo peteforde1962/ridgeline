@@ -31,6 +31,7 @@ export default async function DashboardPage() {
     { data: allRides },
     { data: planSessions },
     { data: weekCheckins },
+    { count: unreadChat },
   ] = await Promise.all([
     supabase.from("check_ins").select("*").eq("user_id", user.id).eq("date", today).maybeSingle(),
     supabase.from("rides").select("id, date, km, elev_m, minutes, notes, sport_type, activity_kind, ride_trails(trails(name))").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: false }),
@@ -40,6 +41,10 @@ export default async function DashboardPage() {
       .eq("user_id", user.id),
     supabase.from("plan_sessions").select("week_index, day_index, session_idx, completed, swapped_to, planned_minutes, ride_id, is_extra").eq("user_id", user.id),
     supabase.from("check_ins").select("date, sleep, soreness, energy").eq("user_id", user.id).gte("date", sevenDaysAgo).order("date", { ascending: true }),
+    supabase.from("coach_messages")
+      .select("id", { count: "exact", head: true })
+      .neq("sender_id", user.id)
+      .is("read_by_recipient_at", null),
   ]);
 
   const displayName = profile?.name || user.email?.split("@")[0] || "rider";
@@ -183,8 +188,22 @@ export default async function DashboardPage() {
             </p>
           </div>
           {/* Header CTAs are always visible, regardless of plan state — you
-              can still log a check-in and ask Coach even between plans. */}
-          <div className="flex gap-2 flex-wrap">
+              can still log a check-in and ask Coach even between plans.
+              A pink pill CTA appears when there are unread chat messages so
+              the user can jump straight to the thread. */}
+          <div className="flex gap-2 flex-wrap items-center">
+            {unreadChat > 0 && (
+              <a
+                href={profile?.role === "coach" && profile?.coach_approved ? "/coaching" : "/coach-chat"}
+                className="btn-primary text-sm inline-flex items-center gap-1.5"
+                style={{
+                  background: "linear-gradient(135deg, var(--accent), var(--accent2,#fccabb))",
+                }}
+              >
+                <Icon name="chat" size={16} stroke="#1a2a30" />
+                {unreadChat} new message{unreadChat === 1 ? "" : "s"}
+              </a>
+            )}
             <a href="/today" className="btn-primary text-sm"><Icon name="target" size={16} stroke="#1a2a30" /> Today</a>
             <a href="/checkin" className="btn-ghost text-sm"><Icon name="heart" size={16} /> Check-in</a>
             <a href="/coach" className="btn-ghost text-sm"><Icon name="bolt" size={16} /> Coach AI</a>
