@@ -8,7 +8,7 @@
 // render dim and aren't clickable.
 
 import { useMemo, useState } from "react";
-import { sessionLabel, sessionTagClass, rideToPlanIndex } from "@/lib/plan";
+import { sessionLabel, sessionTagClass, rideToPlanIndex, activePause } from "@/lib/plan";
 import { sportInfo } from "@/lib/activity";
 
 // Map an activity kind to a plan session type so we can reuse sessionTagClass
@@ -52,7 +52,8 @@ export default function PlanCalendar({
   sessionsByDay,
   extrasByDay,
   notesByDay,
-  ridesByDate,       // NEW: { "YYYY-MM-DD": [{ minutes, activity_kind }, ...] }
+  ridesByDate,       // { "YYYY-MM-DD": [{ minutes, activity_kind, sport_type }, ...] }
+  pauses,            // [{ starts_on, ends_on, reason }, ...]
   todayYMD,
 }) {
   // Default to the month containing today (or today's local month if no plan).
@@ -118,32 +119,50 @@ export default function PlanCalendar({
           const extras  = key ? (extrasByDay[key] || []) : [];
           const hasNote = key && notesByDay.has(key);
 
-          // Build list of (type, status) pills for this day.
+          // Build list of (type, status) pills for this day + tally planned
+          // minutes so we can show a per-day total at the bottom of each cell.
           const pills = [];
+          let plannedMin = 0;
           if (dayObj) {
             dayObj.details.forEach((s, si) => {
               if (s.type === "rest") return;
               const row = stored?.[si];
-              // Skip pills the user deleted via the Delete button on a template session.
               if (row?.tweak === "removed") return;
               const eff = row?.swapped_to || s.type;
               const done = !!row?.completed;
               const skipped = row?.tweak === "skipped";
               pills.push({ type: eff, done, skipped, extra: false });
+              if (row?.planned_minutes && !skipped) plannedMin += row.planned_minutes;
             });
             extras.forEach((e) => {
               if (e.tweak === "removed") return;
               pills.push({ type: e.swapped_to || "ride", done: !!e.completed, skipped: false, extra: true });
+              if (e.planned_minutes) plannedMin += e.planned_minutes;
             });
           }
+
+          // Sum synced-activity minutes for the day-total line.
+          const ridesToday = ridesByDate?.[dateStr] || [];
+          const actualMin = ridesToday.reduce((a, r) => a + (+r.minutes || 0), 0);
 
           const MAX_PILLS = 3;
           const visible = pills.slice(0, MAX_PILLS);
           const overflow = pills.length - visible.length;
 
-          const cellBg = isToday
-            ? "rgba(248,182,166,0.15)"
-            : (inMonth ? "var(--panel)" : "transparent");
+          // Holiday check — is this date inside any of the user's pauses?
+          const holiday = activePause(dateStr, pauses || []);
+
+          const cellBg = holiday
+            ? "repeating-linear-gradient(45deg, rgba(248,182,166,.10) 0 6px, rgba(248,182,166,.04) 6px 12px)"
+            : isToday
+              ? "rgba(248,182,166,0.15)"
+              : (inMonth ? "var(--panel)" : "transparent");
+
+          const cellBorder = holiday
+            ? "1px dashed rgba(248,182,166,.55)"
+            : isToday
+              ? "1.5px solid var(--accent)"
+              : "1px solid var(--line)";
 
           // Every day is clickable now — routes to the universal /day/[date]
           // view so athletes can add workouts on ANY day, not just plan days.
@@ -158,21 +177,32 @@ export default function PlanCalendar({
               className="transition-opacity hover:opacity-90 block"
               style={{
                 background: cellBg,
-                border: isToday ? "1.5px solid var(--accent)" : "1px solid var(--line)",
+                border: cellBorder,
                 borderRadius: 8,
                 padding: 6,
-                minHeight: 86,
+                minHeight: 100,
                 opacity: inMonth ? 1 : 0.35,
                 cursor: "pointer",
                 textDecoration: "none",
                 color: "inherit",
+                display: "flex",
+                flexDirection: "column",
               }}
+              title={holiday ? `On holiday${holiday.reason ? " · " + holiday.reason : ""}` : undefined}
             >
               <div className="flex items-baseline justify-between mb-1 gap-1">
                 <span className={`text-xs font-semibold ${isToday ? "text-[var(--accent)]" : ""}`}>
                   {date.getDate()}
                 </span>
-                {hasNote && <span className="text-[10px] text-[var(--accent2,#fccabb)]">✎</span>}
+                <div className="flex items-center gap-1">
+                  {holiday && (
+                    <span className="text-[9px] font-bold uppercase px-1 rounded"
+                          style={{ background: "var(--accent)", color: "#1a2a30", letterSpacing: "0.5px" }}>
+                      hol
+                    </span>
+                  )}
+                  {hasNote && <span className="text-[10px] text-[var(--accent2,#fccabb)]">✎</span>}
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-0.5">
@@ -196,8 +226,13 @@ export default function PlanCalendar({
                     +{overflow}
                   </span>
                 )}
-                {pills.length === 0 && inPlan && (
+                {pills.length === 0 && inPlan && !holiday && ridesToday.length === 0 && (
                   <span className="text-[9px] text-[var(--muted)] italic">Rest</span>
+                )}
+                {pills.length === 0 && ridesToday.length === 0 && holiday && (
+                  <span className="text-[9px] italic" style={{ color: "var(--accent2,#fccabb)" }}>
+                    Pause{holiday.reason ? ` · ${holiday.reason}` : ""}
+                  </span>
                 )}
 
                 {/* Synced-activity pills — MTB, E-MTB, Strength, etc. using the
@@ -219,13 +254,35 @@ export default function PlanCalendar({
                   );
                 })}
               </div>
+
+              {/* Footer line — total minutes for the day (planned + actual).
+                  Pushed to the bottom with mt-auto so cells stay uniform height. */}
+              {(plannedMin > 0 || actualMin > 0) && (
+                <div className="mt-auto pt-1.5 flex justify-between items-baseline gap-1 text-[9px]"
+                     style={{ borderTop: "1px dashed rgba(255,255,255,.06)" }}>
+                  {plannedMin > 0 ? (
+                    <span className="text-[var(--muted)]" title="Planned">
+                      Plan {plannedMin >= 60 ? `${Math.floor(plannedMin/60)}h${plannedMin%60 ? plannedMin%60 : ""}` : `${plannedMin}m`}
+                    </span>
+                  ) : <span />}
+                  {actualMin > 0 && (
+                    <span className="font-bold" style={{ color: "var(--accent2,#fccabb)" }} title="Actual synced">
+                      ↑ {actualMin >= 60 ? `${Math.floor(actualMin/60)}h${actualMin%60 ? actualMin%60 : ""}` : `${actualMin}m`}
+                    </span>
+                  )}
+                </div>
+              )}
             </Cell>
           );
         })}
       </div>
 
-      <p className="text-[10px] text-[var(--muted)] mt-3">
-        Click any day to view details. Plan pills: ✓ done, + extra, strikethrough = skipped. Pills starting with • are synced activities (MTB, Strength, E-MTB, etc.).
+      <p className="text-[10px] text-[var(--muted)] mt-3 leading-relaxed">
+        Click any day to view details. Plan pills: <strong>✓</strong> done, <strong>+</strong> extra, strikethrough = skipped.
+        Pills starting with <strong>•</strong> are synced activities (MTB, Strength, E-MTB, etc.).
+        <br />
+        Footer: <strong>Plan</strong> = planned duration for the day, <strong>↑</strong> = actual minutes synced from Strava/Suunto.
+        Diagonal peach lines = <strong>holiday / plan pause</strong>.
       </p>
     </div>
   );

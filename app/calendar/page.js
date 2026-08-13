@@ -26,10 +26,15 @@ export default async function CalendarPage() {
   // Pull plan-side state (sessions + notes) and rides for the last 90 days
   // so calendar cells reflect both the plan and the activity you actually did.
   const ninetyDaysAgo = new Date(Date.now() - 90 * 86400_000).toISOString().slice(0, 10);
-  const [{ data: allSessions }, { data: allNotes }, { data: recentRides }] = await Promise.all([
+  const [
+    { data: allSessions },
+    { data: allNotes },
+    { data: recentRides },
+    { data: pauses },
+  ] = await Promise.all([
     supabase
       .from("plan_sessions")
-      .select("week_index,day_index,session_idx,completed,tweak,swapped_to,is_extra,custom_name,custom_notes,ride_id")
+      .select("week_index,day_index,session_idx,completed,tweak,swapped_to,is_extra,custom_name,custom_notes,ride_id,planned_minutes")
       .eq("user_id", user.id),
     supabase
       .from("plan_day_notes")
@@ -41,6 +46,10 @@ export default async function CalendarPage() {
       .eq("user_id", user.id)
       .gte("date", ninetyDaysAgo)
       .order("date", { ascending: false }),
+    supabase
+      .from("plan_pauses")
+      .select("starts_on, ends_on, reason")
+      .eq("user_id", user.id),
   ]);
 
   // Index plan session state by (week, day).
@@ -94,6 +103,7 @@ export default async function CalendarPage() {
         extrasByDay={extrasByDay}
         notesByDay={notesByDay}
         ridesByDate={ridesByDate}
+        pauses={pauses || []}
         todayYMD={todayYMD}
       />
     </main>
