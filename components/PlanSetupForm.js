@@ -47,11 +47,35 @@ export default function PlanSetupForm({ userId, profile }) {
       : [0,1,2,3,4,5,6]
   );
 
+  // Which activity types are included in this rider's plan. Empty array means
+  // "everything" for backward compat, but the UI initializes to the full set.
+  const [enabledActivities, setEnabledActivities] = useState(
+    Array.isArray(profile?.enabled_activities) && profile.enabled_activities.length > 0
+      ? profile.enabled_activities
+      : ["ride", "strength", "yoga", "run", "rope"]
+  );
+  const [bodyFocus, setBodyFocus] = useState(
+    Array.isArray(profile?.body_focus) && profile.body_focus.length > 0
+      ? profile.body_focus
+      : ["legs", "core", "upper", "posterior"]
+  );
+  const [trainingFocus, setTrainingFocus] = useState(
+    Array.isArray(profile?.training_focus) ? profile.training_focus : []
+  );
+
   function toggleDay(idx) {
     setWorkoutDays((cur) =>
       cur.includes(idx) ? cur.filter((d) => d !== idx) : [...cur, idx].sort((a,b) => a-b)
     );
   }
+  function toggleInArray(setter) {
+    return (val) => setter((cur) =>
+      cur.includes(val) ? cur.filter((x) => x !== val) : [...cur, val]
+    );
+  }
+  const toggleActivity = toggleInArray(setEnabledActivities);
+  const toggleBody     = toggleInArray(setBodyFocus);
+  const toggleFocus    = toggleInArray(setTrainingFocus);
 
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -91,6 +115,12 @@ export default function PlanSetupForm({ userId, profile }) {
       preset, weekly_hours: weeklyHours, intensity,
       plan_weeks: planWeeks, goal, race_date: raceDate || null,
       workout_days: workoutDays.length > 0 ? workoutDays : [0,1,2,3,4,5,6],
+      // Save at least one activity even if the user unchecked everything.
+      enabled_activities: enabledActivities.length > 0
+        ? enabledActivities
+        : ["ride", "strength", "yoga", "run", "rope"],
+      body_focus:     bodyFocus,
+      training_focus: trainingFocus,
       started_at: newStartedAt,
       updated_at: new Date().toISOString(),
     };
@@ -232,6 +262,87 @@ export default function PlanSetupForm({ userId, profile }) {
         <p className="text-xs text-[var(--muted)] mt-2">
           Selected days will have workouts scheduled. Unselected days become rest days.
           {workoutDays.length === 0 && <span className="text-[var(--red,#e87262)]"> (Pick at least one day or your plan will be all rest!)</span>}
+        </p>
+      </div>
+
+      {/* --- Activities to include in the plan --- */}
+      <div className="mb-6 pt-4" style={{ borderTop: "1px dashed var(--line)" }}>
+        <label className="field-label">Include which activities?</label>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: "ride",     label: "Riding" },
+            { key: "strength", label: "Strength" },
+            { key: "yoga",     label: "Yoga & Mobility" },
+            { key: "run",      label: "Running" },
+            { key: "rope",     label: "Flow Rope" },
+          ].map(({ key, label }) => {
+            const on = enabledActivities.includes(key);
+            return (
+              <button key={key} type="button" onClick={() => toggleActivity(key)}
+                className={on ? "btn-primary text-sm" : "btn-ghost text-sm"}
+                style={{ padding: "8px 14px" }}>
+                {on && "✓ "}{label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-[var(--muted)] mt-2">
+          Uncheck anything you don't want in your plan (e.g. no flow rope, or riding-only).
+          Days that had ONLY unchecked activities become rest days.
+          {enabledActivities.length === 0 && <span className="text-[var(--red,#e87262)]"> (Pick at least one activity!)</span>}
+        </p>
+      </div>
+
+      {/* --- Body regions to emphasize (weights strength content) --- */}
+      <div className="mb-6">
+        <label className="field-label">Emphasize which body regions?</label>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: "legs",       label: "Legs" },
+            { key: "core",       label: "Core" },
+            { key: "upper",      label: "Upper body" },
+            { key: "posterior",  label: "Posterior chain" },
+            { key: "mobility",   label: "Mobility" },
+          ].map(({ key, label }) => {
+            const on = bodyFocus.includes(key);
+            return (
+              <button key={key} type="button" onClick={() => toggleBody(key)}
+                className={on ? "btn-primary text-sm" : "btn-ghost text-sm"}
+                style={{ padding: "8px 14px" }}>
+                {on && "✓ "}{label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-[var(--muted)] mt-2">
+          Coach AI biases strength workouts toward these areas.
+        </p>
+      </div>
+
+      {/* --- MTB skill focus (weights ride content + skills suggestions) --- */}
+      <div className="mb-6">
+        <label className="field-label">MTB skill focus <span className="text-[var(--muted)] font-normal">(optional)</span></label>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: "climbing",    label: "Climbing" },
+            { key: "descending",  label: "Descending" },
+            { key: "endurance",   label: "Endurance" },
+            { key: "power",       label: "Power / sprints" },
+            { key: "technical",   label: "Technical skills" },
+            { key: "race",        label: "Race prep" },
+          ].map(({ key, label }) => {
+            const on = trainingFocus.includes(key);
+            return (
+              <button key={key} type="button" onClick={() => toggleFocus(key)}
+                className={on ? "btn-primary text-sm" : "btn-ghost text-sm"}
+                style={{ padding: "8px 14px" }}>
+                {on && "✓ "}{label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-[var(--muted)] mt-2">
+          Coach AI biases ride content + skill sessions toward these focuses.
         </p>
       </div>
 

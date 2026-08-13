@@ -60,6 +60,17 @@ export async function POST(request) {
       ? "(none picked)"
       : profile.focus_skills.join(", ");
 
+    // Plan-tailoring preferences that influence which workouts to suggest.
+    const enabledActs = (profile?.enabled_activities || []).length === 0
+      ? "all (ride, strength, yoga, run, rope)"
+      : profile.enabled_activities.join(", ");
+    const bodyFocusBlock = (profile?.body_focus || []).length === 0
+      ? "(no preference)"
+      : profile.body_focus.join(", ");
+    const trainingFocusBlock = (profile?.training_focus || []).length === 0
+      ? "(no MTB skill focus set)"
+      : profile.training_focus.join(", ");
+
     const systemMsg = [
       "You are an expert mountain biking coach. You speak directly to the athlete.",
       "Be specific, concrete, brief. Use mountain biking language. Avoid hedging.",
@@ -73,6 +84,9 @@ export async function POST(request) {
       `Goal: ${profile?.goal || "Race fitness"}${profile?.race_date ? ` · Target date: ${profile.race_date}` : ""}`,
       `Self-rated skills: ${skillBlock}`,
       `Focus skills (plan should bias toward these): ${focusBlock}`,
+      `Enabled activity types: ${enabledActs}`,
+      `Body regions to emphasize in strength work: ${bodyFocusBlock}`,
+      `MTB skill focus: ${trainingFocusBlock}`,
       "",
       "── CURRENT PLAN STATE ──",
       `Plan length: ${plan.length} weeks. Started: ${profile?.started_at || "?"}`,
