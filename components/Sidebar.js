@@ -65,6 +65,7 @@ const LIBRARIES = [
 const BOTTOM = [
   { href: "/coach-chat", label: "Coach chat",  ico: ICONS.whistle, studentWithCoachOnly: true },
   { href: "/coaching",   label: "Coaching",    ico: ICONS.whistle, coachOnly: true },
+  { href: "/plan/setup", label: "Plan setup",  ico: ICONS.cog },
   { href: "/profile",    label: "Profile",     ico: ICONS.cog },
   { href: "/admin",      label: "Admin",       ico: ICONS.bars, adminOnly: true },
 ];

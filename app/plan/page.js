@@ -42,7 +42,7 @@ export default async function PlanPage({ searchParams }) {
           <p className="text-[var(--muted)] mb-5">
             Set up your training plan to get a periodized schedule built around your goals, weekly hours, and race date.
           </p>
-          <a href="/profile" className="btn-primary inline-flex">Set up plan →</a>
+          <a href="/plan/setup" className="btn-primary inline-flex">Set up plan →</a>
         </div>
       </main>
     );
@@ -67,7 +67,7 @@ export default async function PlanPage({ searchParams }) {
             You wrapped the last week. Reset and generate a fresh plan around your next goal, or take a recovery block and start again when you're ready.
           </p>
           <div className="flex flex-wrap gap-2 justify-center">
-            <a href="/profile" className="btn-primary">Start a new plan →</a>
+            <a href="/plan/setup" className="btn-primary">Start a new plan →</a>
             <a href="/calendar" className="btn-ghost">View calendar</a>
           </div>
         </div>

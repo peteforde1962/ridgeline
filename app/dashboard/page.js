@@ -180,10 +180,10 @@ export default async function DashboardPage() {
                 <span className="inline-flex items-center gap-1.5">
                   <Icon name="star" size={16} stroke="var(--accent)" />
                   Plan complete —{" "}
-                  <a href="/profile" className="text-[var(--accent)] font-semibold">start a new one →</a>
+                  <a href="/plan/setup" className="text-[var(--accent)] font-semibold">start a new one →</a>
                 </span>
               ) : (
-                <>No active plan — <a href="/profile" className="text-[var(--accent)] font-semibold">set one up →</a></>
+                <>No active plan — <a href="/plan/setup" className="text-[var(--accent)] font-semibold">set one up →</a></>
               )}
             </p>
           </div>
@@ -217,7 +217,7 @@ export default async function DashboardPage() {
           <p className="text-sm text-[var(--muted)] mb-3">
             Tell us about your riding so we can tailor the workouts.
           </p>
-          <a href="/profile" className="btn-primary"><Icon name="cog" size={16} stroke="#1a2a30" /> Set up my profile</a>
+          <a href="/plan/setup" className="btn-primary"><Icon name="cog" size={16} stroke="#1a2a30" /> Set up my plan</a>
         </section>
       )}
 

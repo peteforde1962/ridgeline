@@ -93,7 +93,7 @@ export default async function CalendarPage() {
           ? "Month view of your plan + synced activities. Click a day to open it."
           : status === "complete"
           ? "Your plan is complete — this view still shows any activity you've synced."
-          : "No plan set up yet — this shows any activity you've synced. Set up a plan on Profile to fill the grid."}
+          : <>No plan set up yet — this shows any activity you've synced. <a href="/plan/setup" className="text-[var(--accent)] font-semibold">Set up a plan →</a></>}
       </p>
 
       <PlanCalendar

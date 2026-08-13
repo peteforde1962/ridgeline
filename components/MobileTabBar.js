@@ -34,6 +34,7 @@ const SHEET = [
   { href: "/videos",        label: "Videos",       icon: "movie" },
   { href: "/coach-chat",    label: "Coach chat",   icon: "whistle", studentWithCoachOnly: true },
   { href: "/coaching",      label: "Coaching",     icon: "whistle", coachOnly: true },
+  { href: "/plan/setup",    label: "Plan setup",   icon: "cog" },
   { href: "/profile",       label: "Profile",      icon: "cog" },
   { href: "/admin",         label: "Admin",        icon: "bars", adminOnly: true },
 ];

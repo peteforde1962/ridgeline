@@ -210,7 +210,7 @@ export default async function DayPage({ params }) {
       {!canStoreExtras && (
         <div className="card text-center mt-6" style={{ padding: 24 }}>
           <p className="text-sm text-[var(--muted)] mb-3">Set up a plan to add and track workouts on any day.</p>
-          <a href="/profile" className="btn-primary text-sm">Set up a plan →</a>
+          <a href="/plan/setup" className="btn-primary text-sm">Set up a plan →</a>
         </div>
       )}
 

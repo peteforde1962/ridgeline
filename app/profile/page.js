@@ -3,8 +3,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import RiderIdentityForm from "@/components/RiderIdentityForm";
-import PlanSetupForm from "@/components/PlanSetupForm";
-import PlanPauses from "@/components/PlanPauses";
 import StravaCard from "@/components/StravaCard";
 import SuuntoCard from "@/components/SuuntoCard";
 import GarminCard from "@/components/GarminCard";
@@ -57,9 +55,21 @@ export default async function ProfilePage({ searchParams }) {
 
         <RiderIdentityForm userId={user.id} profile={profile} />
 
-        <PlanSetupForm userId={user.id} profile={profile} />
-
-        <PlanPauses userId={user.id} />
+        {/* Plan configuration lives on its own page — this card is just a
+            summary + shortcut so /profile stays about identity + integrations. */}
+        <div className="card flex items-center justify-between gap-3 flex-wrap">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold mb-0.5">Training plan</h2>
+            <p className="text-sm text-[var(--muted)]">
+              {profile?.started_at
+                ? <>Started <strong className="text-[var(--text)]">{profile.started_at}</strong> · {profile?.plan_weeks || 12} weeks · {profile?.preset || "Sport"} preset</>
+                : <>You don't have an active plan yet.</>}
+            </p>
+          </div>
+          <a href="/plan/setup" className="btn-primary text-sm">
+            {profile?.started_at ? "Manage plan →" : "Set up plan →"}
+          </a>
+        </div>
 
         <TrainingZones profile={profile} />
 

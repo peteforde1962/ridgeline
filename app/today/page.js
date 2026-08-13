@@ -75,9 +75,9 @@ export default async function TodayPage() {
         {status === "active" ? (
           <>Week {week.week} · {day.day} · {week.phaseName} phase</>
         ) : status === "complete" ? (
-          <>Plan complete — free training. <a href="/profile" className="text-[var(--accent)] font-semibold">Start a new plan →</a></>
+          <>Plan complete — free training. <a href="/plan/setup" className="text-[var(--accent)] font-semibold">Start a new plan →</a></>
         ) : (
-          <>No active plan. <a href="/profile" className="text-[var(--accent)] font-semibold">Set one up →</a></>
+          <>No active plan. <a href="/plan/setup" className="text-[var(--accent)] font-semibold">Set one up →</a></>
         )}
       </p>
 
@@ -103,7 +103,7 @@ export default async function TodayPage() {
               </div>
               <div className="text-xs text-[var(--muted)]">
                 No daily emails until {new Date(holiday.ends_on + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}.
-                {" "}<a href="/profile" className="text-[var(--accent)] font-semibold">Manage pauses →</a>
+                {" "}<a href="/plan/setup" className="text-[var(--accent)] font-semibold">Manage pauses →</a>
               </div>
             </div>
           </div>
@@ -225,7 +225,7 @@ export default async function TodayPage() {
         <div className="card text-center mt-4" style={{ padding: 28 }}>
           <p className="mb-3">No workouts scheduled and no activity synced today.</p>
           <div className="flex flex-wrap gap-2 justify-center">
-            <a href="/profile" className="btn-primary text-sm">Set up a plan →</a>
+            <a href="/plan/setup" className="btn-primary text-sm">Set up a plan →</a>
             <a href="/coach" className="btn-ghost text-sm inline-flex items-center gap-1">
               <Icon name="bolt" size={13} /> Ask Coach AI
             </a>
