@@ -121,7 +121,10 @@ export default function PlanCalendar({
 
           // Build list of (type, status) pills for this day + tally planned
           // minutes so we can show a per-day total at the bottom of each cell.
+          // Also track which synced ride IDs are already represented as plan
+          // pills so we don't double-render the same activity as two pills.
           const pills = [];
+          const coveredRideIds = new Set();
           let plannedMin = 0;
           if (dayObj) {
             dayObj.details.forEach((s, si) => {
@@ -132,18 +135,23 @@ export default function PlanCalendar({
               const done = !!row?.completed;
               const skipped = row?.tweak === "skipped";
               pills.push({ type: eff, done, skipped, extra: false });
+              if (row?.ride_id) coveredRideIds.add(row.ride_id);
               if (row?.planned_minutes && !skipped) plannedMin += row.planned_minutes;
             });
             extras.forEach((e) => {
               if (e.tweak === "removed") return;
               pills.push({ type: e.swapped_to || "ride", done: !!e.completed, skipped: false, extra: true });
+              if (e.ride_id) coveredRideIds.add(e.ride_id);
               if (e.planned_minutes) plannedMin += e.planned_minutes;
             });
           }
 
-          // Sum synced-activity minutes for the day-total line.
+          // Sum synced-activity minutes for the day-total line, and produce
+          // the list of rides we still need to render as their own pills
+          // (i.e. rides NOT already attached to a plan session for this day).
           const ridesToday = ridesByDate?.[dateStr] || [];
           const actualMin = ridesToday.reduce((a, r) => a + (+r.minutes || 0), 0);
+          const uncoveredRides = ridesToday.filter((r) => !coveredRideIds.has(r.id));
 
           const MAX_PILLS = 3;
           const visible = pills.slice(0, MAX_PILLS);
@@ -215,10 +223,15 @@ export default function PlanCalendar({
                       opacity: p.skipped ? 0.5 : 1,
                       textDecoration: p.skipped ? "line-through" : "none",
                       fontWeight: 700,
+                      // Completed pills get a subtle green tint so "done" pops
+                      // visually without changing the underlying kind color.
+                      boxShadow: p.done ? "inset 0 0 0 1px rgba(92,184,92,.55)" : undefined,
                     }}
                     title={sessionLabel(p.type) + (p.done ? " · done" : "") + (p.extra ? " · extra" : "")}
                   >
-                    {p.done && "✓"}{!p.done && p.extra && "+"}{sessionLabel(p.type).slice(0, 4)}
+                    {p.done && <span style={{ color: "#5cb85c" }}>✓</span>}
+                    {!p.done && p.extra && "+"}
+                    {sessionLabel(p.type).slice(0, 4)}
                   </span>
                 ))}
                 {overflow > 0 && (
@@ -235,19 +248,19 @@ export default function PlanCalendar({
                   </span>
                 )}
 
-                {/* Synced-activity pills — MTB, E-MTB, Strength, etc. using the
-                    real sport_type label from lib/activity.js. Only shown when
-                    the activity isn't already covered by a plan pill for this
-                    day (avoids double-labeling when auto-tick has run). */}
-                {(ridesByDate?.[dateStr] || []).map((r, idx) => {
+                {/* Synced-activity pills — MTB, E-MTB, Strength, etc. Only
+                    render rides that AREN'T already represented as a plan pill
+                    (via auto-tick's ride_id), so the same activity never shows
+                    twice. Full opacity so their color matches the plan pills. */}
+                {uncoveredRides.map((r, idx) => {
                   const info = sportInfo(r.sport_type);
                   const type = KIND_TO_PLAN_TYPE[info.kind] || "rest";
                   return (
                     <span
                       key={`r-${r.id || idx}`}
                       className={`text-[9px] px-1.5 py-0.5 rounded ${sessionTagClass(type)}`}
-                      style={{ fontWeight: 700, opacity: 0.9 }}
-                      title={`${info.label} · ${r.minutes} min (synced)`}
+                      style={{ fontWeight: 700 }}
+                      title={`${info.label} · ${r.minutes} min (synced, no plan slot)`}
                     >
                       • {info.label}
                     </span>
