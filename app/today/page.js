@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildPlan, currentWeekIndex, todayDayIndex, todayDateInTz, readinessFromCheckin, sessionLabel, planStatus } from "@/lib/plan";
+import { buildPlan, currentWeekIndex, todayDayIndex, todayDateInTz, readinessFromCheckin, sessionLabel, planStatus, activePause } from "@/lib/plan";
 import { recordedActivityLabel } from "@/lib/activity-mapping";
 import SessionCard from "@/components/SessionCard";
 import LogoMark from "@/components/LogoMark";
@@ -19,14 +19,16 @@ export default async function TodayPage() {
     .from("profiles").select("*").eq("id", user.id).single();
 
   const today = todayDateInTz(profile?.timezone);
-  const [{ data: todayCheckin }, { data: dayRides }] = await Promise.all([
+  const [{ data: todayCheckin }, { data: dayRides }, { data: pauses }] = await Promise.all([
     supabase.from("check_ins").select("*")
       .eq("user_id", user.id).eq("date", today).maybeSingle(),
     supabase.from("rides")
       .select("id, km, elev_m, minutes, source, notes, ride_trails(trails(name))")
       .eq("user_id", user.id).eq("date", today)
       .order("minutes", { ascending: false }),
+    supabase.from("plan_pauses").select("starts_on, ends_on, reason").eq("user_id", user.id),
   ]);
+  const holiday = activePause(today, pauses || []);
 
   const plan = buildPlan(profile);
   const status = planStatus(profile, plan);
@@ -78,6 +80,35 @@ export default async function TodayPage() {
           <>No active plan. <a href="/profile" className="text-[var(--accent)] font-semibold">Set one up →</a></>
         )}
       </p>
+
+      {holiday && (
+        <div
+          className="card mb-5"
+          style={{
+            background: "rgba(248,182,166,.12)",
+            borderColor: "rgba(248,182,166,.55)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className="inline-flex items-center justify-center rounded-full"
+              style={{ width: 40, height: 40, background: "rgba(248,182,166,.25)" }}
+            >
+              <Icon name="moon" size={20} stroke="var(--accent)" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold">
+                On holiday — RidgeLine is paused
+                {holiday.reason && <span className="text-[var(--muted)] font-normal"> · {holiday.reason}</span>}
+              </div>
+              <div className="text-xs text-[var(--muted)]">
+                No daily emails until {new Date(holiday.ends_on + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}.
+                {" "}<a href="/profile" className="text-[var(--accent)] font-semibold">Manage pauses →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {readiness ? (
         <div
