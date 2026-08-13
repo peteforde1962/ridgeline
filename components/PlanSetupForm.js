@@ -69,16 +69,41 @@ export default function PlanSetupForm({ userId, profile }) {
   async function save(e) {
     e.preventDefault();
     setSaving(true); setError(""); setSuccess("");
+
+    const newStartedAt = startedAt || todayISO();
+    const startedAtChanged =
+      profile?.started_at && profile.started_at !== newStartedAt;
+
+    // Warn before shifting start date — old plan_sessions are keyed by
+    // (week_index, day_index), and those indices will now map to different
+    // calendar dates. Leaving them in place makes the new plan look like
+    // sessions are already ticked done. Cleanest fix: wipe them.
+    if (startedAtChanged) {
+      const ok = confirm(
+        `Change plan start date from ${profile.started_at} to ${newStartedAt}?\n\n` +
+        "This will clear your existing plan history (completions, swaps, extras, notes) " +
+        "because the old data was keyed to the old start date. Your rides and profile stay untouched."
+      );
+      if (!ok) { setSaving(false); return; }
+    }
+
     const patch = {
       preset, weekly_hours: weeklyHours, intensity,
       plan_weeks: planWeeks, goal, race_date: raceDate || null,
       workout_days: workoutDays.length > 0 ? workoutDays : [0,1,2,3,4,5,6],
-      started_at: startedAt || todayISO(),
+      started_at: newStartedAt,
       updated_at: new Date().toISOString(),
     };
     const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
+    if (error) { setSaving(false); setError(error.message); return; }
+
+    // Wipe stale plan state so it can't leak into the shifted date grid.
+    if (startedAtChanged) {
+      await supabase.from("plan_sessions").delete().eq("user_id", userId);
+      await supabase.from("plan_day_notes").delete().eq("user_id", userId);
+    }
+
     setSaving(false);
-    if (error) { setError(error.message); return; }
     setSuccess(planActive ? "Plan settings saved." : "Plan started!");
     router.refresh();
   }
