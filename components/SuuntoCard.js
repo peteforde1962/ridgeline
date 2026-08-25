@@ -57,10 +57,30 @@ export default function SuuntoCard({ connected, userId, lastSyncAt, suunto }) {
             <button onClick={disconnect} className="btn-ghost">Disconnect</button>
           </div>
           {result && (
-            <p className="text-sm text-[var(--green)] mt-3">
-              ✓ Imported {result.inserted} workout{result.inserted === 1 ? "" : "s"}
-              {result.ticked > 0 && ` · ticked ${result.ticked} plan session${result.ticked === 1 ? "" : "s"}`}.
-            </p>
+            <>
+              <p className="text-sm text-[var(--green)] mt-3">
+                ✓ Imported {result.inserted} workout{result.inserted === 1 ? "" : "s"}
+                {result.ticked > 0 && ` · ticked ${result.ticked} plan session${result.ticked === 1 ? "" : "s"}`}.
+              </p>
+              {result.inserted === 0 && result.fetchInfo && (
+                <div className="text-xs text-[var(--muted)] mt-2 p-3 rounded-lg"
+                     style={{ background: "rgba(255,255,255,.04)", border: "1px solid var(--line)" }}>
+                  <strong className="text-[var(--text)] block mb-1">Nothing imported — diagnostic:</strong>
+                  Suunto returned <strong>{result.fetchInfo.workouts_returned}</strong> workout(s) from the API.
+                  {result.fetchInfo.workouts_returned === 0 && (
+                    <> Either your Suunto account has no recent workouts, or the API key
+                    doesn't have access to workout data. Try recording a workout on your watch and syncing again.</>
+                  )}
+                  {result.fetchInfo.workouts_returned > 0 && result.skipped > 0 && (
+                    <> {result.skipped} were skipped (unsupported activity type or under 1 min).</>
+                  )}
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-[var(--muted)]">Technical details</summary>
+                    <pre className="mt-1 text-[10px] whitespace-pre-wrap break-all">{JSON.stringify(result.fetchInfo, null, 2)}</pre>
+                  </details>
+                </div>
+              )}
+            </>
           )}
           {error && <p className="text-sm text-[var(--red)] mt-3">⚠ {error}</p>}
         </div>

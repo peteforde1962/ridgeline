@@ -20,16 +20,34 @@ export async function POST(request) {
 
     const accessToken = await ensureFreshToken(supabase, profile);
 
-    // Look back at least 30 days, or to last sync if more recent.
-    const thirtyDaysMs = 30 * 86400_000;
-    const sinceLast = profile.suunto_last_sync_at ? new Date(profile.suunto_last_sync_at).getTime() : Date.now() - thirtyDaysMs;
-    const since = Math.min(sinceLast, Date.now() - thirtyDaysMs);
+    // First sync (no prior sync timestamp): fetch WITHOUT the `since` filter so
+    // we get whatever Suunto has to offer, up to limit=100. Prevents an empty
+    // first sync if their default clock/interpretation of `since` differs.
+    // Later syncs use a 90-day rolling window (bumped from 30 for safety).
+    const isFirstSync = !profile.suunto_last_sync_at;
+    const ninetyDaysMs = 90 * 86400_000;
+    const sinceLast = profile.suunto_last_sync_at
+      ? new Date(profile.suunto_last_sync_at).getTime()
+      : Date.now() - ninetyDaysMs;
+    const since = isFirstSync ? null : Math.min(sinceLast, Date.now() - ninetyDaysMs);
 
-    const workouts = await fetchWorkouts(accessToken, { since });
+    const { workouts, requestUrl, rawShape } = await fetchWorkouts(accessToken, { since });
     const plan = buildPlan(profile);
 
     let inserted = 0, skipped = 0, ticked = 0;
     const debug = [];
+    // Diagnostics that always ship in the response — helps triage empty syncs.
+    const fetchInfo = {
+      request_url: requestUrl,
+      response_shape: rawShape,
+      workouts_returned: workouts.length,
+      first_sync: isFirstSync,
+      since_value: since,
+      subscription_key_set: !!process.env.SUUNTO_SUBSCRIPTION_KEY,
+      // Sample of activityIds returned so we can see what Suunto sent even
+      // when we drop them all as non-cycling / no-duration.
+      sample_activity_ids: workouts.slice(0, 5).map((w) => w.activityId),
+    };
 
     for (const w of workouts) {
       const row = workoutToRide(w, user.id);
@@ -102,7 +120,13 @@ export async function POST(request) {
 
     await supabase.from("profiles").update({ suunto_last_sync_at: new Date().toISOString() }).eq("id", user.id);
 
-    return Response.json({ ok: true, fetched: workouts.length, inserted, skipped, ticked, debug });
+    return Response.json({
+      ok: true,
+      fetched: workouts.length,
+      inserted, skipped, ticked,
+      fetchInfo,
+      debug,
+    });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
