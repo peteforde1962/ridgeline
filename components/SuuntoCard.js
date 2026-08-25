@@ -74,8 +74,32 @@ export default function SuuntoCard({ connected, userId, lastSyncAt, suunto }) {
                   {result.fetchInfo.workouts_returned > 0 && result.skipped > 0 && (
                     <> {result.skipped} were skipped (unsupported activity type or under 1 min).</>
                   )}
+                  {result.fetchInfo.workouts_returned > 0 && result.skipped === 0 && (
+                    <> None were skipped by filters — all failed at the database insert step.
+                    See the errors below for the actual reason.</>
+                  )}
+
+                  {/* Surface the first few debug entries so the actual error is visible. */}
+                  {Array.isArray(result.debug) && result.debug.length > 0 && (
+                    <details className="mt-2" open>
+                      <summary className="cursor-pointer text-[var(--text)] font-semibold">
+                        Per-workout errors ({result.debug.length})
+                      </summary>
+                      <ul className="mt-1 space-y-1">
+                        {result.debug.slice(0, 5).map((d, i) => (
+                          <li key={i} className="text-[11px] pl-2"
+                              style={{ borderLeft: "2px solid var(--accent)" }}>
+                            <strong>{d.workout}</strong>
+                            {d.error && <> · <span style={{ color: "var(--red,#e87262)" }}>{d.error}</span></>}
+                            {d.skipped && <> · skipped: {d.skipped}</>}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+
                   <details className="mt-2">
-                    <summary className="cursor-pointer text-[var(--muted)]">Technical details</summary>
+                    <summary className="cursor-pointer text-[var(--muted)]">Full technical details</summary>
                     <pre className="mt-1 text-[10px] whitespace-pre-wrap break-all">{JSON.stringify(result.fetchInfo, null, 2)}</pre>
                   </details>
                 </div>
