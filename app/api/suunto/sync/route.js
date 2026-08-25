@@ -1,7 +1,7 @@
 // POST /api/suunto/sync — pull recent Suunto workouts and import as rides.
 
 import { createClient } from "@/lib/supabase/server";
-import { ensureFreshToken, fetchWorkouts, workoutToRide } from "@/lib/suunto";
+import { ensureFreshToken, fetchWorkouts, workoutToRide, workoutSkipReason } from "@/lib/suunto";
 import { buildPlan, rideToPlanIndex } from "@/lib/plan";
 import { sessionTypeForActivityKind, recordedActivityLabel } from "@/lib/activity-mapping";
 
@@ -37,6 +37,9 @@ export async function POST(request) {
     let inserted = 0, skipped = 0, ticked = 0;
     const debug = [];
     // Diagnostics that always ship in the response — helps triage empty syncs.
+    // Include a top-level-keys sample + full first workout so we can see
+    // exactly what fields Suunto sends for this account/tier.
+    const firstWorkout = workouts[0] || null;
     const fetchInfo = {
       request_url: requestUrl,
       response_shape: rawShape,
@@ -44,16 +47,28 @@ export async function POST(request) {
       first_sync: isFirstSync,
       since_value: since,
       subscription_key_set: !!process.env.SUUNTO_SUBSCRIPTION_KEY,
-      // Sample of activityIds returned so we can see what Suunto sent even
-      // when we drop them all as non-cycling / no-duration.
       sample_activity_ids: workouts.slice(0, 5).map((w) => w.activityId),
+      // Names of every top-level field on the first workout — quickly tells
+      // us whether the duration is under a different key (duration / etc.).
+      first_workout_keys: firstWorkout ? Object.keys(firstWorkout) : [],
+      // Full raw first workout so we can see the actual values. Workout data
+      // isn't sensitive so it's safe to surface.
+      first_workout_sample: firstWorkout,
+      // Skip-reason breakdown so we know if it's duration, non-cycling, etc.
+      skip_reasons: {},
     };
 
     for (const w of workouts) {
       const row = workoutToRide(w, user.id);
       if (!row) {
         skipped++;
-        debug.push({ workout: w.workoutKey || w.id, skipped: "non-cycling", activityId: w.activityId });
+        const reason = workoutSkipReason(w) || "unknown";
+        fetchInfo.skip_reasons[reason] = (fetchInfo.skip_reasons[reason] || 0) + 1;
+        debug.push({
+          workout: w.workoutKey || w.id,
+          activityId: w.activityId,
+          skipped: reason,
+        });
         continue;
       }
 
