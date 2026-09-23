@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import RiderIdentityForm from "@/components/RiderIdentityForm";
+import UpdateEmailForm from "@/components/UpdateEmailForm";
 import StravaCard from "@/components/StravaCard";
 import SuuntoCard from "@/components/SuuntoCard";
 import GarminCard from "@/components/GarminCard";
@@ -23,6 +24,14 @@ export default async function ProfilePage({ searchParams }) {
     .select("*")
     .eq("id", user.id)
     .single();
+
+  // If the user just changed their email via UpdateEmailForm and clicked the
+  // confirmation link, auth.users.email is now updated but profiles.email
+  // (our mirror) may still hold the old value. Reconcile silently on load.
+  if (profile && user.email && profile.email !== user.email) {
+    await supabase.from("profiles").update({ email: user.email }).eq("id", user.id);
+    profile.email = user.email;
+  }
 
   const stravaStatus = searchParams?.strava || "";
   const suuntoStatus = searchParams?.suunto || "";
@@ -54,6 +63,8 @@ export default async function ProfilePage({ searchParams }) {
           : <StudentCoachCard profile={profile} coach={coach} />}
 
         <RiderIdentityForm userId={user.id} profile={profile} />
+
+        <UpdateEmailForm userId={user.id} currentEmail={user.email} />
 
         {/* Plan configuration lives on its own page — this card is just a
             summary + shortcut so /profile stays about identity + integrations. */}
